@@ -7,7 +7,6 @@ import {
   ICON_BLOCKS,
   ICON_BOT,
   ICON_BRIEFCASE,
-  ICON_CHART,
   ICON_CLOCK_ALERT,
   ICON_CODE,
   ICON_CONTACT,
@@ -15,13 +14,10 @@ import {
   ICON_DATABASE,
   ICON_INBOX,
   ICON_LAYOUT_TEMPLATE,
-  ICON_LIBRARY,
-  ICON_MEGAPHONE,
   ICON_MESSAGE_CIRCLE,
   ICON_MESSAGE_QUOTE,
   ICON_PHONE,
   ICON_REPEAT,
-  ICON_SMILE,
   ICON_SQUARE_USER,
   ICON_TAGS,
   ICON_TOY_BRICK,
@@ -31,7 +27,6 @@ import {
 import { isUpgradePageBypassRoute } from 'dashboard/helper/routeHelpers';
 
 const SECTION_GENERAL = 'COMMAND_BAR.SECTIONS.GENERAL';
-const SECTION_REPORTS = 'COMMAND_BAR.SECTIONS.REPORTS';
 const SECTION_SETTINGS = 'COMMAND_BAR.SECTIONS.SETTINGS';
 
 const GO_TO_COMMANDS = [
@@ -70,84 +65,6 @@ const GO_TO_COMMANDS = [
     section: SECTION_GENERAL,
     icon: ICON_PHONE,
     routeName: 'calls_dashboard_index',
-  },
-  {
-    id: 'goto_campaigns',
-    title: 'COMMAND_BAR.COMMANDS.GO_TO_CAMPAIGNS',
-    section: SECTION_GENERAL,
-    icon: ICON_MEGAPHONE,
-    routeName: 'campaigns_livechat_index',
-  },
-  {
-    id: 'goto_help_center',
-    title: 'COMMAND_BAR.COMMANDS.GO_TO_HELP_CENTER',
-    section: SECTION_GENERAL,
-    icon: ICON_LIBRARY,
-    routeName: 'portals_index',
-    params: { navigationPath: 'portals_articles_index' },
-  },
-  {
-    id: 'open_reports_overview',
-    title: 'COMMAND_BAR.COMMANDS.GO_TO_REPORTS_OVERVIEW',
-    section: SECTION_REPORTS,
-    icon: ICON_CHART,
-    routeName: 'account_overview_reports',
-  },
-  {
-    id: 'open_conversation_reports',
-    title: 'COMMAND_BAR.COMMANDS.GO_TO_CONVERSATION_REPORTS',
-    section: SECTION_REPORTS,
-    icon: ICON_MESSAGE_CIRCLE,
-    routeName: 'conversation_reports',
-  },
-  {
-    id: 'open_agent_reports',
-    title: 'COMMAND_BAR.COMMANDS.GO_TO_AGENT_REPORTS',
-    section: SECTION_REPORTS,
-    icon: ICON_SQUARE_USER,
-    routeName: 'agent_reports_index',
-  },
-  {
-    id: 'open_label_reports',
-    title: 'COMMAND_BAR.COMMANDS.GO_TO_LABEL_REPORTS',
-    section: SECTION_REPORTS,
-    icon: ICON_TAGS,
-    routeName: 'label_reports_index',
-  },
-  {
-    id: 'open_inbox_reports',
-    title: 'COMMAND_BAR.COMMANDS.GO_TO_INBOX_REPORTS',
-    section: SECTION_REPORTS,
-    icon: ICON_INBOX,
-    routeName: 'inbox_reports_index',
-  },
-  {
-    id: 'open_team_reports',
-    title: 'COMMAND_BAR.COMMANDS.GO_TO_TEAM_REPORTS',
-    section: SECTION_REPORTS,
-    icon: ICON_USERS,
-    routeName: 'team_reports_index',
-  },
-  {
-    id: 'open_csat_reports',
-    title: 'COMMAND_BAR.COMMANDS.GO_TO_CSAT_REPORTS',
-    section: SECTION_REPORTS,
-    icon: ICON_SMILE,
-    routeName: 'csat_reports',
-  },
-  {
-    id: 'open_bot_reports',
-    title: 'COMMAND_BAR.COMMANDS.GO_TO_BOT_REPORTS',
-    section: SECTION_REPORTS,
-    icon: ICON_BOT,
-    routeName: 'bot_reports',
-  },
-  {
-    id: 'open_sla_reports',
-    title: 'COMMAND_BAR.COMMANDS.GO_TO_SLA_REPORTS',
-    section: SECTION_REPORTS,
-    icon: ICON_CLOCK_ALERT,
-    routeName: 'sla_reports',
   },
   {
     id: 'open_agent_settings',

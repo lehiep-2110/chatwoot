@@ -32,21 +32,25 @@ describe('#defaultRedirectPage', () => {
     expect(defaultRedirectPage(to, permissions)).toBe('accounts/2/contacts');
   });
 
-  it('should return reports route for users with report permissions', () => {
+  it('should return profile settings for users with only report permissions', () => {
     const permissions = ['report_manage'];
     expect(defaultRedirectPage(to, permissions)).toBe(
-      'accounts/2/reports/overview'
+      'accounts/2/profile/settings'
     );
   });
 
-  it('should return portals route for users with portal permissions', () => {
+  it('should return profile settings for users with only portal permissions', () => {
     const permissions = ['knowledge_base_manage'];
-    expect(defaultRedirectPage(to, permissions)).toBe('accounts/2/portals');
+    expect(defaultRedirectPage(to, permissions)).toBe(
+      'accounts/2/profile/settings'
+    );
   });
 
-  it('should return dashboard route as default for users with custom roles', () => {
+  it('should return profile settings as default for users with custom roles', () => {
     const permissions = ['custom_role'];
-    expect(defaultRedirectPage(to, permissions)).toBe('accounts/2/dashboard');
+    expect(defaultRedirectPage(to, permissions)).toBe(
+      'accounts/2/profile/settings'
+    );
   });
 
   it('should return dashboard route for users with administrator role', () => {
@@ -123,7 +127,16 @@ describe('#validateLoggedInRoutes', () => {
                 params: { accountId: 1 },
                 meta: { permissions: ['administrator'] },
               },
-              { accounts: [{ id: 1, role: 'agent', status: 'active' }] }
+              {
+                accounts: [
+                  {
+                    id: 1,
+                    role: 'agent',
+                    permissions: ['agent'],
+                    status: 'active',
+                  },
+                ],
+              }
             )
           ).toEqual(`accounts/1/dashboard`);
         });

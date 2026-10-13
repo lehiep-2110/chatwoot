@@ -1,6 +1,5 @@
 <script setup>
 import { computed } from 'vue';
-import { frontendURL } from 'dashboard/helper/URLHelper';
 import { dynamicTime } from 'shared/helpers/timeHelper';
 import { useExactTimestamp } from 'shared/composables/useExactTimestamp';
 import { ARTICLE_STATUSES } from 'dashboard/helper/portalHelper';
@@ -9,14 +8,10 @@ import CardLayout from 'dashboard/components-next/CardLayout.vue';
 import MessageFormatter from 'shared/helpers/MessageFormatter';
 
 const props = defineProps({
-  id: { type: [String, Number], default: 0 },
   title: { type: String, default: '' },
   description: { type: String, default: '' },
   category: { type: String, default: '' },
-  locale: { type: String, default: '' },
   content: { type: String, default: '' },
-  portalSlug: { type: String, required: true },
-  accountId: { type: [String, Number], default: 0 },
   status: { type: String, default: '' },
   updatedAt: { type: Number, default: 0 },
 });
@@ -24,12 +19,6 @@ const props = defineProps({
 const exactTimestamp = useExactTimestamp();
 
 const MAX_LENGTH = 300;
-
-const navigateTo = computed(() => {
-  return frontendURL(
-    `accounts/${props.accountId}/portals/${props.portalSlug}/${props.locale}/articles/edit/${props.id}`
-  );
-});
 
 const updatedAtTime = computed(() => {
   if (!props.updatedAt) return '';
@@ -61,7 +50,7 @@ const statusTextColor = computed(() => {
 </script>
 
 <template>
-  <router-link :to="navigateTo">
+  <div>
     <CardLayout
       layout="col"
       class="[&>div]:justify-start [&>div]:gap-2 [&>div]:px-4 [&>div]:pt-4 [&>div]:pb-5 [&>div]:items-start hover:bg-n-slate-2 dark:hover:bg-n-solid-3"
@@ -108,5 +97,5 @@ const statusTextColor = computed(() => {
         </p>
       </div>
     </CardLayout>
-  </router-link>
+  </div>
 </template>

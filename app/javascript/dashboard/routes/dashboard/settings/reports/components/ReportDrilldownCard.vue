@@ -118,14 +118,6 @@ const inboxPath = computed(() => {
   );
 });
 
-const agentPath = computed(() => {
-  if (!conversation.value.assignee_id) return '';
-
-  return frontendURL(
-    `accounts/${route.params.accountId}/reports/agents/${conversation.value.assignee_id}`
-  );
-});
-
 const metadataItems = computed(() => [
   {
     key: 'contact',
@@ -146,7 +138,7 @@ const metadataItems = computed(() => [
     label:
       conversation.value.assignee_name ||
       t('REPORT.DRILLDOWN.UNASSIGNED_AGENT'),
-    path: agentPath.value,
+    path: '',
   },
 ]);
 

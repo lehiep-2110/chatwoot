@@ -133,14 +133,13 @@ describe('ReportDrilldownCard.vue', () => {
     expect(messageCreatedLabel).toContain('Message created at');
   });
 
-  it('renders separate contact, inbox, and agent links', async () => {
+  it('renders contact and inbox links while keeping the agent label', async () => {
     const wrapper = mountCard();
     const links = wrapper.findAll('a');
 
     expect(links.map(link => link.attributes('href'))).toEqual([
       '/app/accounts/1/contacts/11',
       '/app/accounts/1/inbox/12',
-      '/app/accounts/1/reports/agents/13',
     ]);
     expect(links.every(link => link.attributes('target') === '_blank')).toBe(
       true
@@ -154,6 +153,7 @@ describe('ReportDrilldownCard.vue', () => {
     expect(wrapper.find('.i-lucide-contact').exists()).toBe(true);
     expect(wrapper.find('.i-lucide-inbox').exists()).toBe(true);
     expect(wrapper.find('.i-lucide-user-round').exists()).toBe(true);
+    expect(wrapper.text()).toContain('Alex');
 
     await links[0].trigger('click');
 

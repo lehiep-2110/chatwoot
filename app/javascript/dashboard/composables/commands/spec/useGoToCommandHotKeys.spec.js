@@ -160,13 +160,13 @@ describe('useGoToCommandHotKeys', () => {
     expect(agentCommand).toBeDefined();
   });
 
-  it('should include commands granted by a custom role permission', () => {
+  it('should exclude report navigation even with report permissions', () => {
     userPermissions = ['custom_role', 'report_manage'];
     const { goToCommandHotKeys } = useGoToCommandHotKeys();
 
     expect(
       goToCommandHotKeys.value.find(cmd => cmd.id.includes('reports_overview'))
-    ).toBeDefined();
+    ).toBeUndefined();
     expect(
       goToCommandHotKeys.value.find(cmd => cmd.id.includes('agent_settings'))
     ).toBeUndefined();
@@ -181,11 +181,11 @@ describe('useGoToCommandHotKeys', () => {
     );
   });
 
-  it('should offer the help center to a knowledge base manager', () => {
+  it('should exclude help center navigation for a knowledge base manager', () => {
     userPermissions = ['custom_role', 'knowledge_base_manage'];
     const { goToCommandHotKeys } = useGoToCommandHotKeys();
 
-    expect(goToCommandHotKeys.value.map(cmd => cmd.id)).toContain(
+    expect(goToCommandHotKeys.value.map(cmd => cmd.id)).not.toContain(
       'goto_help_center'
     );
   });

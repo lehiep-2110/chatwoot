@@ -8,8 +8,6 @@ import {
   ROLES,
   CONVERSATION_PERMISSIONS,
   CONTACT_PERMISSIONS,
-  REPORTS_PERMISSIONS,
-  PORTAL_PERMISSIONS,
 } from 'dashboard/constants/permissions.js';
 
 export const routeIsAccessibleFor = (route, userPermissions = []) => {
@@ -26,15 +24,13 @@ export const defaultRedirectPage = (to, permissions) => {
       path: 'dashboard',
     },
     { permissions: [CONTACT_PERMISSIONS], path: 'contacts' },
-    { permissions: [REPORTS_PERMISSIONS], path: 'reports/overview' },
-    { permissions: [PORTAL_PERMISSIONS], path: 'portals' },
   ];
 
   const route = permissionRoutes.find(({ permissions: routePermissions }) =>
     hasPermissions(routePermissions, permissions)
   );
 
-  return `accounts/${accountId}/${route ? route.path : 'dashboard'}`;
+  return `accounts/${accountId}/${route ? route.path : 'profile/settings'}`;
 };
 
 const validateActiveAccountRoutes = (to, user) => {
@@ -49,7 +45,7 @@ const validateActiveAccountRoutes = (to, user) => {
   const userPermissions = getUserPermissions(user, to.params.accountId);
 
   const isAccessible = routeIsAccessibleFor(to, userPermissions);
-  // If the route is not accessible for the user, return to dashboard screen
+  // If the route is not accessible, choose a remaining page the user can open.
   return isAccessible ? null : defaultRedirectPage(to, userPermissions);
 };
 
