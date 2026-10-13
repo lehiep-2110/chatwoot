@@ -3,7 +3,6 @@ import CustomButton from 'shared/components/Button.vue';
 import Spinner from 'shared/components/Spinner.vue';
 import { mapGetters } from 'vuex';
 import { getContrastingTextColor } from '@chatwoot/utils';
-import { isEmptyObject } from 'widget/helpers/utils';
 import { getRegexp } from 'shared/helpers/Validators';
 import { useMessageFormatter } from 'shared/composables/useMessageFormatter';
 import configMixin from 'widget/mixins/configMixin';
@@ -50,7 +49,6 @@ export default {
       widgetColor: 'appConfig/getWidgetColor',
       isCreating: 'conversation/getIsCreating',
       isConversationRouting: 'appConfig/getIsUpdatingRoute',
-      activeCampaign: 'campaign/getActiveCampaign',
       currentUser: 'contacts/getCurrentUser',
     }),
     isCreatingConversation() {
@@ -59,23 +57,11 @@ export default {
     textColor() {
       return getContrastingTextColor(this.widgetColor);
     },
-    hasActiveCampaign() {
-      return !isEmptyObject(this.activeCampaign);
-    },
     shouldShowHeaderMessage() {
-      return (
-        this.hasActiveCampaign ||
-        (this.preChatFormEnabled && !!this.headerMessage)
-      );
+      return this.preChatFormEnabled && !!this.headerMessage;
     },
     headerMessage() {
-      if (this.preChatFormEnabled) {
-        return this.options.preChatMessage;
-      }
-      if (this.hasActiveCampaign) {
-        return this.$t('PRE_CHAT_FORM.CAMPAIGN_HEADER');
-      }
-      return '';
+      return this.options.preChatMessage;
     },
     preChatFields() {
       return this.preChatFormEnabled ? this.options.preChatFields : [];
@@ -240,7 +226,6 @@ export default {
         phoneNumber,
         emailAddress,
         message,
-        activeCampaignId: this.activeCampaign.id,
         conversationCustomAttributes: this.conversationCustomAttributes,
         contactCustomAttributes: this.contactCustomAttributes,
       });
@@ -302,7 +287,6 @@ export default {
       :has-error-in-phone-input="hasErrorInPhoneInput"
     />
     <FormKit
-      v-if="!hasActiveCampaign"
       name="message"
       type="textarea"
       label-class="text-sm font-medium text-n-slate-12"

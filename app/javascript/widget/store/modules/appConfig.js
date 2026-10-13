@@ -10,7 +10,6 @@ import {
 
 const state = {
   hideMessageBubble: false,
-  isCampaignViewClicked: false,
   showUnreadMessagesDialog: true,
   isWebWidgetTriggered: false,
   isWidgetOpen: false,

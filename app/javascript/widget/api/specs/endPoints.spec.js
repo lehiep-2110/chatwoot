@@ -135,43 +135,6 @@ describe('#getConversation', () => {
   });
 });
 
-describe('#triggerCampaign', () => {
-  it('should returns correct payload', () => {
-    const spy = vi.spyOn(global, 'Date').mockImplementation(() => ({
-      toString: () => 'mock date',
-    }));
-    vi.spyOn(window, 'location', 'get').mockReturnValue({
-      ...window.location,
-      search: '',
-    });
-    const websiteToken = 'ADSDJ2323MSDSDFMMMASDM';
-    const campaignId = 12;
-    expect(
-      endPoints.triggerCampaign({
-        websiteToken,
-        campaignId,
-      })
-    ).toEqual({
-      url: `/api/v1/widget/events`,
-      data: {
-        name: 'campaign.triggered',
-        event_info: {
-          campaign_id: campaignId,
-          referer: '',
-          initiated_at: {
-            timestamp: 'mock date',
-          },
-        },
-      },
-      params: {
-        website_token: websiteToken,
-      },
-    });
-
-    spy.mockRestore();
-  });
-});
-
 describe('#getConversation', () => {
   it('should returns correct payload', () => {
     const spy = vi.spyOn(global, 'Date').mockImplementation(() => ({

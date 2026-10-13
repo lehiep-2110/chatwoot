@@ -1,5 +1,4 @@
 import { buildSearchParamsWithLocale } from '../helpers/urlParamsHelper';
-import { generateEventParams } from './events';
 
 const createConversation = params => {
   const referrerURL = window.referrerURL || '';
@@ -94,27 +93,6 @@ const getAvailableAgents = token => ({
     website_token: token,
   },
 });
-const getCampaigns = token => ({
-  url: '/api/v1/widget/campaigns',
-  params: {
-    website_token: token,
-  },
-});
-const triggerCampaign = ({ websiteToken, campaignId, customAttributes }) => ({
-  url: '/api/v1/widget/events',
-  data: {
-    name: 'campaign.triggered',
-    event_info: {
-      campaign_id: campaignId,
-      custom_attributes: customAttributes,
-      ...generateEventParams(),
-    },
-  },
-  params: {
-    website_token: websiteToken,
-  },
-});
-
 const getMostReadArticles = (slug, locale) => ({
   url: `/hc/${slug}/${locale}/articles.json`,
   params: {
@@ -132,7 +110,5 @@ export default {
   getConversation,
   updateMessage,
   getAvailableAgents,
-  getCampaigns,
-  triggerCampaign,
   getMostReadArticles,
 };

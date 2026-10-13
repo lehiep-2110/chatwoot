@@ -1,12 +1,10 @@
 <script>
 import { mapGetters, mapActions } from 'vuex';
 import { setHeader } from 'widget/helpers/axios';
-import addHours from 'date-fns/addHours';
 import { IFrameHelper, RNHelper } from 'widget/helpers/utils';
 import configMixin from './mixins/configMixin';
 import { getLocale } from './helpers/urlParamsHelper';
 import { getLanguageDirection } from 'dashboard/components/widgets/conversation/advancedFilterItems/languages';
-import { isEmptyObject } from 'widget/helpers/utils';
 import Spinner from 'shared/components/Spinner.vue';
 import {
   getExtraSpaceToScroll,
@@ -14,12 +12,10 @@ import {
 } from './helpers/IframeEventHelper';
 import {
   ON_AGENT_MESSAGE_RECEIVED,
-  ON_CAMPAIGN_MESSAGE_CLICK,
   ON_UNREAD_MESSAGE_CLICK,
 } from './constants/widgetBusEvents';
 import { useDarkMode } from 'widget/composables/useDarkMode';
 import { useRouter } from 'vue-router';
-import { useAvailability } from 'widget/composables/useAvailability';
 import { SDK_SET_BUBBLE_VISIBILITY } from '../shared/constants/sharedFrameEvents';
 import { emitter } from 'shared/helpers/mitt';
 
@@ -32,19 +28,16 @@ export default {
   setup() {
     const { prefersDarkMode } = useDarkMode();
     const router = useRouter();
-    const { isInWorkingHours } = useAvailability();
 
-    return { prefersDarkMode, router, isInWorkingHours };
+    return { prefersDarkMode, router };
   },
   data() {
     return {
       isMobile: false,
-      campaignsSnoozedTill: undefined,
     };
   },
   computed: {
     ...mapGetters({
-      activeCampaign: 'campaign/getActiveCampaign',
       conversationSize: 'conversation/getConversationSize',
       hideMessageBubble: 'appConfig/getHideMessageBubble',
       isFetchingList: 'conversation/getIsFetchingList',
@@ -66,14 +59,11 @@ export default {
         ? getLanguageDirection(this.$root.$i18n.locale)
         : false;
     },
-    isUnreadOrCampaignView() {
-      return ['unread-messages', 'campaigns'].includes(this.$route.name);
+    isUnreadView() {
+      return this.$route.name === 'unread-messages';
     },
   },
   watch: {
-    activeCampaign() {
-      this.setCampaignView();
-    },
     // Keep the notification dot in sync with the unread count. The SDK ignores
     // dot updates while the bubble is hidden, so refresh it when it is back.
     unreadMessageCount() {
@@ -109,7 +99,6 @@ export default {
     }
     this.$store.dispatch('conversationAttributes/getAttributes');
     this.registerUnreadEvents();
-    this.registerCampaignEvents();
   },
   methods: {
     ...mapActions('appConfig', [
@@ -120,11 +109,6 @@ export default {
       'setColorScheme',
     ]),
     ...mapActions('conversation', ['fetchOldConversations']),
-    ...mapActions('campaign', [
-      'initCampaigns',
-      'executeCampaign',
-      'resetCampaign',
-    ]),
     ...mapActions('agent', ['fetchAvailableAgents']),
     setWidgetColorVariable(widgetColor) {
       if (widgetColor) {
@@ -185,44 +169,6 @@ export default {
           .then(() => this.unsetUnreadView());
       });
     },
-    registerCampaignEvents() {
-      emitter.on(ON_CAMPAIGN_MESSAGE_CLICK, () => {
-        if (this.shouldShowPreChatForm) {
-          this.router.replace({ name: 'prechat-form' });
-        } else {
-          this.router.replace({ name: 'messages' });
-          emitter.emit('execute-campaign', {
-            campaignId: this.activeCampaign.id,
-          });
-        }
-        this.unsetUnreadView();
-      });
-      emitter.on('execute-campaign', campaignDetails => {
-        const { customAttributes, campaignId } = campaignDetails;
-        const { websiteToken } = window.chatwootWebChannel;
-        this.executeCampaign({ campaignId, websiteToken, customAttributes });
-        this.router.replace({ name: 'messages' });
-      });
-      emitter.on('snooze-campaigns', () => {
-        const expireBy = addHours(new Date(), 1);
-        this.campaignsSnoozedTill = Number(expireBy);
-      });
-    },
-    setCampaignView() {
-      const { messageCount, activeCampaign } = this;
-      const shouldSnoozeCampaign =
-        this.campaignsSnoozedTill && this.campaignsSnoozedTill > Date.now();
-      const isCampaignReadyToExecute =
-        !isEmptyObject(activeCampaign) &&
-        !messageCount &&
-        !shouldSnoozeCampaign;
-      if (this.isIFrame && isCampaignReadyToExecute) {
-        this.router.replace({ name: 'campaigns' }).then(() => {
-          this.setIframeHeight(true);
-          IFrameHelper.sendMessage({ event: 'setUnreadMode' });
-        });
-      }
-    },
     setUnreadView() {
       const { unreadMessageCount } = this;
       if (!this.showUnreadMessagesDialog || !this.isIFrame) return;
@@ -259,10 +205,7 @@ export default {
     createWidgetEvents(message) {
       const { eventName } = message;
       const isWidgetTriggerEvent = eventName === 'webwidget.triggered';
-      if (
-        isWidgetTriggerEvent &&
-        ['unread-messages', 'campaigns'].includes(this.$route.name)
-      ) {
+      if (isWidgetTriggerEvent && this.isUnreadView) {
         return;
       }
       this.$store.dispatch('events/create', { name: eventName });
@@ -281,16 +224,10 @@ export default {
           this.fetchAvailableAgents(websiteToken);
           this.setAppConfig(message);
           this.$store.dispatch('contacts/get');
-          this.setCampaignReadData(message.campaignsSnoozedTill);
         } else if (message.event === 'widget-visible') {
           this.scrollConversationToBottom();
         } else if (message.event === 'change-url') {
           const { referrerURL, referrerHost } = message;
-          this.initCampaigns({
-            currentURL: referrerURL,
-            websiteToken,
-            isInBusinessHours: this.isInWorkingHours,
-          });
           window.referrerURL = referrerURL;
           this.setReferrerHost(referrerHost);
         } else if (message.event === 'toggle-close-button') {
@@ -335,9 +272,7 @@ export default {
             ['home'].includes(this.$route.name) &&
             message.isOpen &&
             this.messageCount;
-          const shouldShowHomeView =
-            !message.isOpen &&
-            ['unread-messages', 'campaigns'].includes(this.$route.name);
+          const shouldShowHomeView = !message.isOpen && this.isUnreadView;
 
           if (shouldShowMessageView) {
             this.router.replace({ name: 'messages' });
@@ -346,9 +281,6 @@ export default {
             this.$store.dispatch('conversation/setUserLastSeen');
             this.unsetUnreadView();
             this.router.replace({ name: 'home' });
-          }
-          if (!message.isOpen) {
-            this.resetCampaign();
           }
         } else if (message.event === SDK_SET_BUBBLE_VISIBILITY) {
           this.setBubbleVisibility(message.hideMessageBubble);
@@ -360,11 +292,6 @@ export default {
     },
     sendRNWebViewLoadedEvent() {
       RNHelper.sendMessage(loadedEventConfig());
-    },
-    setCampaignReadData(snoozedTill) {
-      if (snoozedTill) {
-        this.campaignsSnoozedTill = Number(snoozedTill);
-      }
     },
   },
 };
@@ -386,7 +313,7 @@ export default {
       'is-widget-right': isRightAligned,
       'is-bubble-hidden': hideMessageBubble,
       'is-flat-design': isWidgetStyleFlat,
-      'bg-n-slate-2 dark:bg-n-solid-1': !isUnreadOrCampaignView,
+      'bg-n-slate-2 dark:bg-n-solid-1': !isUnreadView,
       dark: prefersDarkMode,
     }"
   >

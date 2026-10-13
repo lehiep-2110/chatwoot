@@ -36,7 +36,6 @@ export default {
       fullName,
       emailAddress,
       message,
-      activeCampaignId,
       phoneNumber,
       contactCustomAttributes,
       conversationCustomAttributes,
@@ -45,31 +44,16 @@ export default {
       // identifies the contact. A separate update call would race the contact
       // merge on the server (matching email/phone) and write the values to
       // the destroyed contact, silently losing them.
-      if (activeCampaignId) {
-        emitter.emit('execute-campaign', {
-          campaignId: activeCampaignId,
-          customAttributes: conversationCustomAttributes,
-        });
-        this.$store.dispatch('contacts/update', {
-          user: {
-            email: emailAddress,
-            name: fullName,
-            phone_number: phoneNumber,
-            custom_attributes: contactCustomAttributes,
-          },
-        });
-      } else {
-        this.clearConversations();
-        this.clearConversationAttributes();
-        this.$store.dispatch('conversation/createConversation', {
-          fullName: fullName,
-          emailAddress: emailAddress,
-          message: message,
-          phoneNumber: phoneNumber,
-          customAttributes: conversationCustomAttributes,
-          contactCustomAttributes: contactCustomAttributes,
-        });
-      }
+      this.clearConversations();
+      this.clearConversationAttributes();
+      this.$store.dispatch('conversation/createConversation', {
+        fullName,
+        emailAddress,
+        message,
+        phoneNumber,
+        customAttributes: conversationCustomAttributes,
+        contactCustomAttributes,
+      });
     },
   },
 };

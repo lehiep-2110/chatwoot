@@ -40,6 +40,17 @@ describe('Widget ActionCableConnector', () => {
     );
   });
 
+  it('updates conversation attributes on a status change', () => {
+    const statusChange = { status: 'resolved', id: 12 };
+
+    connector.onStatusChange(statusChange);
+
+    expect(mockDispatch).toHaveBeenCalledWith(
+      'conversationAttributes/update',
+      statusChange
+    );
+  });
+
   it('re-fetches conversation attributes on reconnect so a status change missed while disconnected is reflected', () => {
     connector.onReconnect();
 

@@ -3,10 +3,7 @@ import { useMessageFormatter } from 'shared/composables/useMessageFormatter';
 import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
 import configMixin from '../mixins/configMixin';
 import { isEmptyObject } from 'widget/helpers/utils';
-import {
-  ON_CAMPAIGN_MESSAGE_CLICK,
-  ON_UNREAD_MESSAGE_CLICK,
-} from '../constants/widgetBusEvents';
+import { ON_UNREAD_MESSAGE_CLICK } from '../constants/widgetBusEvents';
 import { emitter } from 'shared/helpers/mitt';
 
 export default {
@@ -25,10 +22,6 @@ export default {
     sender: {
       type: Object,
       default: () => {},
-    },
-    campaignId: {
-      type: Number,
-      default: null,
     },
   },
   setup() {
@@ -81,11 +74,7 @@ export default {
       return sender && !isEmptyObject(sender);
     },
     onClickMessage() {
-      if (this.campaignId) {
-        emitter.emit(ON_CAMPAIGN_MESSAGE_CLICK, this.campaignId);
-      } else {
-        emitter.emit(ON_UNREAD_MESSAGE_CLICK);
-      }
+      emitter.emit(ON_UNREAD_MESSAGE_CLICK);
     },
   },
 };
