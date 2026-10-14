@@ -93,15 +93,6 @@ const getAvailableAgents = token => ({
     website_token: token,
   },
 });
-const getMostReadArticles = (slug, locale) => ({
-  url: `/hc/${slug}/${locale}/articles.json`,
-  params: {
-    page: 1,
-    sort: 'views',
-    status: 1,
-    per_page: 6,
-  },
-});
 
 export default {
   createConversation,
@@ -110,5 +101,4 @@ export default {
   getConversation,
   updateMessage,
   getAvailableAgents,
-  getMostReadArticles,
 };

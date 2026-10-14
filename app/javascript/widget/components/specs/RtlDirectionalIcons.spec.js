@@ -1,11 +1,10 @@
-import { mount, shallowMount } from '@vue/test-utils';
+import { shallowMount } from '@vue/test-utils';
 import { createStore } from 'vuex';
 import FluentIcon from 'shared/components/FluentIcon/Index.vue';
 import CustomerSatisfaction from 'shared/components/CustomerSatisfaction.vue';
 import ChatHeader from '../ChatHeader.vue';
 import ChatSendButton from '../ChatSendButton.vue';
 import EmailInput from '../template/EmailInput.vue';
-import ArticleListItem from '../pageComponents/Home/Article/ArticleListItem.vue';
 
 vi.mock('vue-router', () => ({
   useRouter: () => ({ replace: vi.fn() }),
@@ -64,16 +63,6 @@ describe('widget directional icons in RTL', () => {
     });
 
     expect(wrapper.findComponent(FluentIcon).classes()).toContain(
-      'rtl:rotate-180'
-    );
-  });
-
-  it('mirrors the article list item chevron', () => {
-    const wrapper = mount(ArticleListItem, {
-      props: { title: 'Article', link: '/article' },
-    });
-
-    expect(wrapper.find('.i-lucide-chevron-right').classes()).toContain(
       'rtl:rotate-180'
     );
   });

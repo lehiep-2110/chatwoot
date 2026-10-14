@@ -83,7 +83,6 @@ const buildStore = ({
       'draftMessages/getReplyEditorMode': s => s.replyEditorMode,
       'accounts/isFeatureEnabledonAccount': () => () => false,
       'accounts/getAccount': () => () => ({}),
-      'portals/allPortals': () => [],
       'integrations/getUIFlags': () => ({ isFetching: false }),
     },
   });

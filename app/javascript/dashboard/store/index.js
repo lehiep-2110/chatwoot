@@ -37,7 +37,6 @@ import integrations from './modules/integrations';
 import labels from './modules/labels';
 import macros from './modules/macros';
 import notifications from './modules/notifications';
-import portals from './modules/helpCenterPortals';
 import sla from './modules/sla';
 import sidebarSortPreferences from './modules/sidebarSortPreferences';
 import teamMembers from './modules/teamMembers';
@@ -98,7 +97,6 @@ export default createStore({
     labels,
     macros,
     notifications,
-    portals,
     sla,
     sidebarSortPreferences,
     teamMembers,

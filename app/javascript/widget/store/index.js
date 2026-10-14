@@ -9,7 +9,6 @@ import conversationLabels from 'widget/store/modules/conversationLabels';
 import events from 'widget/store/modules/events';
 import globalConfig from 'shared/store/globalConfig';
 import message from 'widget/store/modules/message';
-import article from 'widget/store/modules/articles';
 
 export default createStore({
   modules: {
@@ -22,6 +21,5 @@ export default createStore({
     events,
     globalConfig,
     message,
-    article,
   },
 });
