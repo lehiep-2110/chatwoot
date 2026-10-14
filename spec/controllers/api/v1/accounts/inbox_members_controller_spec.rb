@@ -93,6 +93,32 @@ RSpec.describe 'Inbox Member API', type: :request do
         expect(inbox.inbox_members&.second&.user).to eq(agent_to_add)
       end
 
+      it 'rejects members outside the account without adding any of the requested users' do
+        foreign_agent = create(:user, account: create(:account), role: :agent)
+
+        post "/api/v1/accounts/#{account.id}/inbox_members",
+             headers: administrator.create_new_auth_token,
+             params: { inbox_id: inbox.id, user_ids: [old_agent.id, agent_to_add.id, foreign_agent.id] },
+             as: :json
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response.parsed_body['error']).to eq('Invalid User IDs')
+        expect(inbox.members.reload.ids).to eq([old_agent.id])
+      end
+
+      it 'accepts a user who belongs to both this account and another account' do
+        shared_agent = create(:user, account: create(:account), role: :agent)
+        create(:account_user, account: account, user: shared_agent, role: :agent)
+
+        post "/api/v1/accounts/#{account.id}/inbox_members",
+             headers: administrator.create_new_auth_token,
+             params: { inbox_id: inbox.id, user_ids: [shared_agent.id] },
+             as: :json
+
+        expect(response).to have_http_status(:success)
+        expect(inbox.members.reload).to include(old_agent, shared_agent)
+      end
+
       it 'renders not found when inbox not found' do
         params = { inbox_id: nil, user_ids: [agent_to_add.id] }
 
@@ -113,7 +139,7 @@ RSpec.describe 'Inbox Member API', type: :request do
              as: :json
 
         expect(response).to have_http_status(:unprocessable_entity)
-        expect(response.body).to include('User must exist')
+        expect(response.parsed_body['error']).to eq('Invalid User IDs')
       end
     end
   end
@@ -168,6 +194,29 @@ RSpec.describe 'Inbox Member API', type: :request do
         expect(inbox.inbox_members&.first&.user).to eq(agent_to_add)
       end
 
+      it 'rejects members outside the account without replacing existing members' do
+        foreign_agent = create(:user, account: create(:account), role: :agent)
+
+        patch "/api/v1/accounts/#{account.id}/inbox_members",
+              headers: administrator.create_new_auth_token,
+              params: { inbox_id: inbox.id, user_ids: [agent_to_add.id, foreign_agent.id] },
+              as: :json
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response.parsed_body['error']).to eq('Invalid User IDs')
+        expect(inbox.members.reload.ids).to eq([old_agent.id])
+      end
+
+      it 'allows clearing the member list' do
+        patch "/api/v1/accounts/#{account.id}/inbox_members",
+              headers: administrator.create_new_auth_token,
+              params: { inbox_id: inbox.id, user_ids: [] },
+              as: :json
+
+        expect(response).to have_http_status(:success)
+        expect(inbox.members.reload).to be_empty
+      end
+
       it 'renders not found when inbox not found' do
         params = { inbox_id: nil, user_ids: [agent_to_add.id] }
 
@@ -188,7 +237,7 @@ RSpec.describe 'Inbox Member API', type: :request do
               as: :json
 
         expect(response).to have_http_status(:unprocessable_entity)
-        expect(response.body).to include('User must exist')
+        expect(response.parsed_body['error']).to eq('Invalid User IDs')
       end
     end
   end

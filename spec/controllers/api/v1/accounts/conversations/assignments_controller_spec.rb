@@ -180,5 +180,137 @@ RSpec.describe 'Conversation Assignment API', type: :request do
         expect(conversation.reload.team).to be_nil
       end
     end
+
+    context 'when checking the human assignee access' do
+      let(:administrator) { create(:user, account: account, role: :administrator) }
+      let(:original_assignee) { create(:user, account: account, role: :agent) }
+      let(:recipient) { create(:user, account: account, role: :agent) }
+      let(:inbox) { create(:inbox, account: account, enable_auto_assignment: false) }
+      let(:conversation) { create(:conversation, account: account, inbox: inbox) }
+
+      before do
+        create(:inbox_member, inbox: inbox, user: original_assignee)
+        conversation.update!(assignee: original_assignee, status: :resolved)
+      end
+
+      it 'rejects an assignee from another account without clearing the current assignment' do
+        foreign_agent = create(:user, account: create(:account), role: :agent)
+
+        post api_v1_account_conversation_assignments_url(account_id: account.id, conversation_id: conversation.display_id),
+             params: { assignee_id: foreign_agent.id },
+             headers: administrator.create_new_auth_token,
+             as: :json
+
+        expect(response).to have_http_status(:not_found)
+        expect(conversation.reload).to have_attributes(assignee: original_assignee, status: 'resolved')
+      end
+
+      it 'rejects a team from another account without changing the conversation' do
+        foreign_team = create(:team, account: create(:account))
+
+        post api_v1_account_conversation_assignments_url(account_id: account.id, conversation_id: conversation.display_id),
+             params: { team_id: foreign_team.id },
+             headers: administrator.create_new_auth_token,
+             as: :json
+
+        expect(response).to have_http_status(:not_found)
+        expect(conversation.reload).to have_attributes(assignee: original_assignee, team: nil, status: 'resolved')
+      end
+
+      it 'rejects an agent without inbox or conversation team access' do
+        post api_v1_account_conversation_assignments_url(account_id: account.id, conversation_id: conversation.display_id),
+             params: { assignee_id: recipient.id },
+             headers: administrator.create_new_auth_token,
+             as: :json
+
+        expect(response).to have_http_status(:unauthorized)
+        expect(conversation.reload).to have_attributes(assignee: original_assignee, status: 'resolved')
+      end
+
+      it 'rejects an agent whose only team does not own the conversation' do
+        other_team = create(:team, account: account)
+        create(:team_member, team: other_team, user: recipient)
+
+        post api_v1_account_conversation_assignments_url(account_id: account.id, conversation_id: conversation.display_id),
+             params: { assignee_id: recipient.id },
+             headers: administrator.create_new_auth_token,
+             as: :json
+
+        expect(response).to have_http_status(:unauthorized)
+        expect(conversation.reload.assignee).to eq(original_assignee)
+      end
+
+      it 'does not inherit administrator privileges from another account' do
+        create(:account_user, account: create(:account), user: recipient, role: :administrator)
+
+        post api_v1_account_conversation_assignments_url(account_id: account.id, conversation_id: conversation.display_id),
+             params: { assignee_id: recipient.id },
+             headers: administrator.create_new_auth_token,
+             as: :json
+
+        expect(response).to have_http_status(:unauthorized)
+        expect(conversation.reload.assignee).to eq(original_assignee)
+      end
+
+      it 'accepts a member of the inbox' do
+        create(:inbox_member, inbox: inbox, user: recipient)
+
+        post api_v1_account_conversation_assignments_url(account_id: account.id, conversation_id: conversation.display_id),
+             params: { assignee_id: recipient.id },
+             headers: administrator.create_new_auth_token,
+             as: :json
+
+        expect(response).to have_http_status(:success)
+        expect(response.parsed_body['id']).to eq(recipient.id)
+        expect(conversation.reload).to have_attributes(assignee: recipient, status: 'resolved')
+      end
+
+      it 'accepts a member of the conversation team without inbox membership' do
+        team = create(:team, account: account, allow_auto_assign: false)
+        create(:team_member, team: team, user: recipient)
+        conversation.update!(team: team)
+
+        post api_v1_account_conversation_assignments_url(account_id: account.id, conversation_id: conversation.display_id),
+             params: { assignee_id: recipient.id },
+             headers: administrator.create_new_auth_token,
+             as: :json
+
+        expect(response).to have_http_status(:success)
+        expect(conversation.reload).to have_attributes(assignee: recipient, team: team, status: 'resolved')
+      end
+
+      it 'accepts an administrator of this account without inbox membership' do
+        post api_v1_account_conversation_assignments_url(account_id: account.id, conversation_id: conversation.display_id),
+             params: { assignee_id: administrator.id },
+             headers: administrator.create_new_auth_token,
+             as: :json
+
+        expect(response).to have_http_status(:success)
+        expect(conversation.reload.assignee).to eq(administrator)
+      end
+
+      it 'preserves bot ownership and pending status when the recipient has no access' do
+        agent_bot = create(:agent_bot, account: account)
+        conversation.update!(assignee: nil, ai_assignee: agent_bot, status: :pending)
+
+        post api_v1_account_conversation_assignments_url(account_id: account.id, conversation_id: conversation.display_id),
+             params: { assignee_id: recipient.id },
+             headers: administrator.create_new_auth_token,
+             as: :json
+
+        expect(response).to have_http_status(:unauthorized)
+        expect(conversation.reload).to have_attributes(assignee: nil, ai_assignee: agent_bot, status: 'pending')
+      end
+
+      it 'does not let a request disable assignee access validation' do
+        post api_v1_account_conversation_assignments_url(account_id: account.id, conversation_id: conversation.display_id),
+             params: { assignee_id: recipient.id, validate_assignee_access: false },
+             headers: administrator.create_new_auth_token,
+             as: :json
+
+        expect(response).to have_http_status(:unauthorized)
+        expect(conversation.reload).to have_attributes(assignee: original_assignee, status: 'resolved')
+      end
+    end
   end
 end
