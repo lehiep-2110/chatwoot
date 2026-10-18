@@ -4,16 +4,6 @@ import DashboardAudioNotificationHelper from './AudioAlerts/DashboardAudioNotifi
 import { BUS_EVENTS } from 'shared/constants/busEvents';
 import { emitter } from 'shared/helpers/mitt';
 import { useImpersonation } from 'dashboard/composables/useImpersonation';
-import { useCallsStore } from 'dashboard/stores/calls';
-import {
-  applyOutboundAnswer,
-  armOutboundRecorder,
-  handleWhatsappRemoteEnd,
-  isLocalWhatsappCall,
-} from 'dashboard/composables/useWhatsappCallSession';
-import { VOICE_CALL_PROVIDERS } from 'dashboard/helper/inbox';
-import { markCallDismissed, isLocalCall } from 'dashboard/helper/voice';
-import { VOICE_CALL_DIRECTION } from 'dashboard/components-next/message/constants';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 
 const { isImpersonating } = useImpersonation();
@@ -61,11 +51,6 @@ class ActionCableConnector extends BaseActionCableConnector {
       'account.cache_invalidated': this.onCacheInvalidate,
       'account.enrichment_completed': this.onEnrichmentCompleted,
       'copilot.message.created': this.onCopilotMessageCreated,
-      'voice_call.incoming': this.onVoiceCallIncoming,
-      'voice_call.accepted': this.onVoiceCallAccepted,
-      'voice_call.outbound_connected': this.onVoiceCallOutboundConnected,
-      'voice_call.outbound_accepted': this.onVoiceCallOutboundAccepted,
-      'voice_call.ended': this.onVoiceCallEnded,
     };
   }
 
@@ -356,108 +341,6 @@ class ActionCableConnector extends BaseActionCableConnector {
       // by filtered unread counts even when no conversation row changes.
       this.refreshConversationUnreadCountsWithFilteredRetry();
     }
-  };
-
-  onVoiceCallIncoming = data => {
-    if (data?.provider !== VOICE_CALL_PROVIDERS.WHATSAPP) return;
-    // Defense in depth: the server already filters to online agent streams,
-    // but if anything ever broadcasts to a broader stream (e.g. account-wide),
-    // an agent who's set availability=offline/busy shouldn't ring.
-    const availability = this.app.$store.getters.getCurrentUserAvailability;
-    if (availability !== 'online') return;
-
-    useCallsStore().addCall({
-      callSid: data.call_id,
-      callId: data.id,
-      conversationId: data.conversation_id,
-      inboxId: data.inbox_id,
-      callDirection: VOICE_CALL_DIRECTION.INBOUND,
-      provider: VOICE_CALL_PROVIDERS.WHATSAPP,
-      sdpOffer: data.sdp_offer,
-      iceServers: data.ice_servers,
-      recordingEnabled: data.recording_enabled !== false,
-      caller: data.caller,
-    });
-  };
-
-  // Inbound call accepted (in this tab or a sibling tab/window on the same
-  // account, on either provider). Broadcast is account-wide, so drop the
-  // ringing card everywhere except the tab that actually owns the now-active
-  // call — removing an active call here would tear down its live WebRTC
-  // session. Check isLocalWhatsappCall/isLocalCall (both set synchronously
-  // before their respective accept/join API calls) rather than the store's
-  // isActive flag, which this tab may not have set yet.
-  // Mark dismissed regardless of locality: the ringing message.created for
-  // this call is queued through ActionCableBroadcastJob and can still be
-  // delivered after this (synchronous) broadcast, which would otherwise
-  // re-add the call as ringing once it finally arrives.
-  // eslint-disable-next-line class-methods-use-this
-  onVoiceCallAccepted = data => {
-    if (!data?.provider) return;
-    markCallDismissed(data.call_id);
-    const isLocal =
-      data.provider === VOICE_CALL_PROVIDERS.WHATSAPP
-        ? isLocalWhatsappCall(data.id)
-        : isLocalCall(data.call_id);
-    if (isLocal) return;
-    useCallsStore().removeCall(data.call_id);
-  };
-
-  // `connect` is the WebRTC tunnel-ready signal (fires ~20s before pickup
-  // for outbound). Apply the SDP answer so the handshake completes during
-  // ringing, but stay non-active until `outbound_accepted` arrives.
-  // eslint-disable-next-line class-methods-use-this
-  onVoiceCallOutboundConnected = async data => {
-    if (data?.provider !== VOICE_CALL_PROVIDERS.WHATSAPP || !data.sdp_answer)
-      return;
-    // Account-wide broadcast that can arrive before /initiate sets this tab's
-    // call id. applyOutboundAnswer filters foreign calls and buffers the answer
-    // until the id is known, so we must not drop it here on a null activeCallId.
-    try {
-      await applyOutboundAnswer(data.id, data.sdp_answer);
-    } catch (_) {
-      /* noop */
-    }
-  };
-
-  // Real pickup signal — Meta sends status=ACCEPTED on the call when the
-  // contact answers. Flip active (timer starts) and arm the recorder.
-  // eslint-disable-next-line class-methods-use-this
-  onVoiceCallOutboundAccepted = data => {
-    if (data?.provider !== VOICE_CALL_PROVIDERS.WHATSAPP) return;
-    const store = useCallsStore();
-    if (!store.calls.some(c => c.callSid === data.call_id)) return;
-    store.setCallActive(data.call_id);
-    armOutboundRecorder();
-  };
-
-  // eslint-disable-next-line class-methods-use-this
-  onVoiceCallEnded = async data => {
-    if (!Object.values(VOICE_CALL_PROVIDERS).includes(data?.provider)) return;
-    // A still-queued ringing message.created (see onVoiceCallAccepted) must not
-    // resurrect a call that has already ended.
-    markCallDismissed(data.call_id);
-    // The store entry should always be removed for this account-wide broadcast,
-    // but the WebRTC/recorder teardown must only run for the call this tab owns
-    // — otherwise an unrelated agent's call ending would stop this tab's
-    // recorder and upload its chunks against the wrong call id. For Twilio,
-    // removeCall's own isActive check already scopes teardown to the owning
-    // tab (via TwilioVoiceClient.endClientCall in teardownByProvider), so no
-    // extra guard is needed here — only WhatsApp's recorder upload must be
-    // awaited before the store entry (and its in-memory chunks) is wiped.
-    if (
-      data.provider === VOICE_CALL_PROVIDERS.WHATSAPP &&
-      isLocalWhatsappCall(data.id)
-    ) {
-      // Await upload before removeCall — the store's sync teardown would otherwise
-      // wipe the recorder chunks before they reach the server.
-      try {
-        await handleWhatsappRemoteEnd(data.id);
-      } catch (_) {
-        /* noop */
-      }
-    }
-    useCallsStore().removeCall(data.call_id);
   };
 }
 

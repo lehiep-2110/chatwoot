@@ -7,7 +7,6 @@ import * as ActiveStorage from 'activestorage';
 import inboxMixin from 'shared/mixins/inboxMixin';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import { getAllowedFileTypesByChannel } from '@chatwoot/utils';
-import VideoCallButton from '../VideoCallButton.vue';
 import RequestContactInfoButton from '../RequestContactInfoButton.vue';
 import { INBOX_TYPES } from 'dashboard/helper/inbox';
 import { mapGetters } from 'vuex';
@@ -18,7 +17,6 @@ export default {
   components: {
     NextButton,
     FileUpload,
-    VideoCallButton,
     RequestContactInfoButton,
   },
   mixins: [inboxMixin],
@@ -97,10 +95,6 @@ export default {
     enableContentTemplates: {
       type: Boolean,
       default: false,
-    },
-    conversationId: {
-      type: Number,
-      required: true,
     },
     // eslint-disable-next-line vue/no-unused-properties
     message: {
@@ -366,14 +360,6 @@ export default {
         faded
         sm
         @click="$emit('selectContentTemplate')"
-      />
-      <VideoCallButton
-        v-if="
-          (isAWebWidgetInbox || isAPIInbox) &&
-          !isOnPrivateNote &&
-          !isEditorDisabled
-        "
-        :conversation-id="conversationId"
       />
       <transition name="modal-fade">
         <div

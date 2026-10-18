@@ -1463,7 +1463,6 @@ export default {
       <ReplyBottomPanel
         v-else
         key="reply-bottom-panel"
-        :conversation-id="conversationId"
         :enable-multiple-file-upload="enableMultipleFileUpload"
         :enable-whats-app-templates="showWhatsappTemplates"
         :enable-content-templates="showContentTemplates"

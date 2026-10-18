@@ -23,7 +23,6 @@ import PreChatFormSettings from './PreChatForm/Settings.vue';
 import WeeklyAvailability from './components/WeeklyAvailability.vue';
 import GreetingsEditor from 'shared/components/GreetingsEditor.vue';
 import ConfigurationPage from './settingsPage/ConfigurationPage.vue';
-import VoiceConfigurationPage from './settingsPage/VoiceConfigurationPage.vue';
 import WhatsappCallingPage from './settingsPage/WhatsappCallingPage.vue';
 import CustomerSatisfactionPage from './settingsPage/CustomerSatisfactionPage.vue';
 import CollaboratorsPage from './settingsPage/CollaboratorsPage.vue';
@@ -58,7 +57,6 @@ export default {
     BotConfiguration,
     CollaboratorsPage,
     ConfigurationPage,
-    VoiceConfigurationPage,
     WhatsappCallingPage,
     CustomerSatisfactionPage,
     FacebookReauthorize,
@@ -260,24 +258,6 @@ export default {
           {
             key: 'twilio-health',
             name: this.$t('INBOX_MGMT.TABS.ACCOUNT_HEALTH'),
-          },
-        ];
-      }
-
-      if (
-        this.isATwilioChannel &&
-        this.inbox.phone_number &&
-        this.inbox.medium === 'sms' &&
-        this.isFeatureEnabledonAccount(
-          this.accountId,
-          FEATURE_FLAGS.CHANNEL_VOICE
-        )
-      ) {
-        visibleToAllChannelTabs = [
-          ...visibleToAllChannelTabs,
-          {
-            key: 'voice-configuration',
-            name: this.$t('INBOX_MGMT.TABS.VOICE'),
           },
         ];
       }
@@ -1388,12 +1368,6 @@ export default {
           :class="isAWebWidgetInbox ? 'max-w-7xl' : 'max-w-4xl'"
         >
           <ConfigurationPage :inbox="inbox" />
-        </div>
-        <div
-          v-if="selectedTabKey === 'voice-configuration'"
-          class="mx-6 max-w-4xl"
-        >
-          <VoiceConfigurationPage :inbox="inbox" />
         </div>
         <div
           v-if="selectedTabKey === 'calls-configuration'"

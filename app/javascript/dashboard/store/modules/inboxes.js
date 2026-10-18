@@ -11,7 +11,7 @@ import { isSendableTemplate } from '@chatwoot/utils';
 import AnalyticsHelper from '../../helper/AnalyticsHelper';
 import camelcaseKeys from 'camelcase-keys';
 import { ACCOUNT_EVENTS } from '../../helper/AnalyticsHelper/events';
-import { channelActions, buildInboxData } from './inboxes/channelActions';
+import { buildInboxData } from './inboxes/channelActions';
 
 export const state = {
   records: [],
@@ -242,7 +242,6 @@ export const actions = {
       throw error;
     }
   },
-  ...channelActions,
   // TODO: Extract other create channel methods to separate files to reduce file size
   // - createChannel
   // - createWebsiteChannel

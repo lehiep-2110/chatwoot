@@ -16,7 +16,6 @@ import {
   ICON_LAYOUT_TEMPLATE,
   ICON_MESSAGE_CIRCLE,
   ICON_MESSAGE_QUOTE,
-  ICON_PHONE,
   ICON_REPEAT,
   ICON_SQUARE_USER,
   ICON_TAGS,
@@ -58,13 +57,6 @@ const GO_TO_COMMANDS = [
     icon: ICON_BOT,
     routeName: 'captain_assistants_index',
     params: { navigationPath: 'captain_assistants_overview_index' },
-  },
-  {
-    id: 'goto_calls_dashboard',
-    title: 'COMMAND_BAR.COMMANDS.GO_TO_CALLS_DASHBOARD',
-    section: SECTION_GENERAL,
-    icon: ICON_PHONE,
-    routeName: 'calls_dashboard_index',
   },
   {
     id: 'open_agent_settings',

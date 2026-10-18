@@ -1,5 +1,5 @@
 <script>
-import { defineAsyncComponent, ref, computed } from 'vue';
+import { defineAsyncComponent, ref } from 'vue';
 
 import NextSidebar from 'next/sidebar/Sidebar.vue';
 import WootKeyShortcutModal from 'dashboard/components/widgets/modal/WootKeyShortcutModal.vue';
@@ -17,15 +17,10 @@ const CommandBar = defineAsyncComponent(
   () => import('./commands/commandbar.vue')
 );
 
-const FloatingCallWidget = defineAsyncComponent(
-  () => import('dashboard/components-next/call/FloatingCallWidget.vue')
-);
-
 import CopilotLauncher from 'dashboard/components-next/copilot/CopilotLauncher.vue';
 import CopilotContainer from 'dashboard/components/copilot/CopilotContainer.vue';
 
 import MobileSidebarLauncher from 'dashboard/components-next/sidebar/MobileSidebarLauncher.vue';
-import { useCallsStore } from 'dashboard/stores/calls';
 
 export default {
   components: {
@@ -36,7 +31,6 @@ export default {
     UpgradePage,
     CopilotLauncher,
     CopilotContainer,
-    FloatingCallWidget,
     MobileSidebarLauncher,
   },
   setup() {
@@ -44,7 +38,6 @@ export default {
     const { uiSettings, updateUISettings } = useUISettings();
     const { accountId } = useAccount();
     const { width: windowWidth } = useWindowSize();
-    const callsStore = useCallsStore();
 
     return {
       uiSettings,
@@ -52,8 +45,6 @@ export default {
       accountId,
       upgradePageRef,
       windowWidth,
-      hasActiveCall: computed(() => callsStore.hasActiveCall),
-      hasIncomingCall: computed(() => callsStore.hasIncomingCall),
     };
   },
   data() {
@@ -160,7 +151,6 @@ export default {
           @toggle="toggleMobileSidebar"
         />
         <CopilotContainer />
-        <FloatingCallWidget v-if="hasActiveCall || hasIncomingCall" />
       </template>
       <CommandBar :is-paywalled="isAccountPaywalled" />
       <AddAccountModal

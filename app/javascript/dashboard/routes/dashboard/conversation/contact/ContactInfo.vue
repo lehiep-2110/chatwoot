@@ -16,7 +16,6 @@ import ContactMergeModal from 'dashboard/modules/contact/ContactMergeModal.vue';
 import ContactDeleteModal from 'dashboard/modules/contact/ContactDeleteModal.vue';
 import ComposeConversation from 'dashboard/components-next/NewConversation/ComposeConversation.vue';
 import NextButton from 'dashboard/components-next/button/Button.vue';
-import VoiceCallButton from 'dashboard/components-next/Contacts/VoiceCallButton.vue';
 import InlineInput from 'dashboard/components-next/inline-input/InlineInput.vue';
 
 export default {
@@ -30,7 +29,6 @@ export default {
     SocialIcons,
     ContactMergeModal,
     ContactDeleteModal,
-    VoiceCallButton,
     InlineInput,
   },
   props: {
@@ -61,7 +59,6 @@ export default {
   computed: {
     ...mapGetters({
       uiFlags: 'contacts/getUIFlags',
-      currentChat: 'getSelectedChat',
     }),
     contactProfileLink() {
       return `/app/accounts/${this.$route.params.accountId}/contacts/${this.contact.id}`;
@@ -339,16 +336,6 @@ export default {
           </template>
         </ComposeConversation>
         <ViewAllConversations :contact="contact" />
-        <VoiceCallButton
-          :phone="contact.phone_number"
-          :contact-id="contact.id"
-          :conversation-id="currentChat?.id"
-          icon="i-lucide-phone"
-          sm
-          faded
-          slate
-          :tooltip-label="$t('CONTACT_PANEL.CALL')"
-        />
         <NextButton
           v-tooltip.top-end="$t('EDIT_CONTACT.BUTTON_LABEL')"
           icon="i-ph-pencil-simple"

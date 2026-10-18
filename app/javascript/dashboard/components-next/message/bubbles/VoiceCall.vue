@@ -2,27 +2,19 @@
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useStore } from 'vuex';
-import { useMapGetter } from 'dashboard/composables/store';
 import { useMessageContext } from '../provider.js';
 import {
   VOICE_CALL_STATUS,
   VOICE_CALL_DIRECTION,
-  VOICE_CALL_OUTBOUND_INIT_STATUS,
   VOICE_CALL_END_REASON,
   MESSAGE_TYPES,
   ATTACHMENT_TYPES,
 } from '../constants';
-import { useCallActions } from 'dashboard/composables/useCallSession';
-import { useWhatsappCallSession } from 'dashboard/composables/useWhatsappCallSession';
-import { useCallsStore } from 'dashboard/stores/calls';
-import { VOICE_CALL_PROVIDERS } from 'dashboard/helper/inbox';
 import { formatDuration } from 'shared/helpers/timeHelper';
-import { useAlert } from 'dashboard/composables';
 
 import Icon from 'dashboard/components-next/icon/Icon.vue';
 import BaseBubble from 'next/message/bubbles/Base.vue';
 import AudioChip from 'next/message/chips/Audio.vue';
-import NextButton from 'dashboard/components-next/button/Button.vue';
 
 const LABEL_MAP = {
   [VOICE_CALL_STATUS.IN_PROGRESS]: 'CONVERSATION.VOICE_CALL.CALL_IN_PROGRESS',
@@ -39,24 +31,8 @@ const ICON_MAP = {
 
 const { t } = useI18n();
 const store = useStore();
-const {
-  call,
-  attachments,
-  contentAttributes,
-  conversationId,
-  currentUserId,
-  inboxId,
-  sender,
-  messageType,
-} = useMessageContext();
-const { joinCall, endCall, activeCall, hasActiveCall, isJoining } =
-  useCallActions();
-const whatsappCallSession = useWhatsappCallSession();
-const callsStore = useCallsStore();
-const contactsUiFlags = useMapGetter('contacts/getUIFlags');
-const isInitiatingCall = computed(
-  () => contactsUiFlags.value?.isInitiatingCall || false
-);
+const { call, attachments, contentAttributes, conversationId, messageType } =
+  useMessageContext();
 
 const status = computed(() => call.value?.status);
 // Server-side call records use `outgoing`/`incoming`, while the Pinia store
@@ -78,9 +54,6 @@ const isOutbound = computed(() => {
   // right (outbound) and contact-authored ones on the left.
   return messageType.value === MESSAGE_TYPES.OUTGOING;
 });
-const isWhatsapp = computed(
-  () => call.value?.provider === VOICE_CALL_PROVIDERS.WHATSAPP
-);
 const isFailed = computed(() =>
   [
     VOICE_CALL_STATUS.NO_ANSWER,
@@ -206,20 +179,6 @@ const iconContainerClass = computed(() => {
   return 'bg-n-alpha-2 text-n-slate-12';
 });
 
-const callSid = computed(() => call.value?.providerCallId);
-
-const canJoinCall = computed(() => {
-  if (status.value !== VOICE_CALL_STATUS.RINGING) return false;
-  if (isOutbound.value) return false;
-  if (acceptedByAgentId.value) return false;
-  if (!callSid.value || !inboxId.value || !conversationId.value) return false;
-  if (hasActiveCall.value && activeCall.value?.callSid === callSid.value)
-    return false;
-  const assignee = conversationAssignee.value;
-  if (assignee?.id && assignee.id !== currentUserId.value) return false;
-  return true;
-});
-
 const recordingAttachment = computed(() => {
   if (audioAttachment.value) return audioAttachment.value;
   const url = call.value?.recordingUrl;
@@ -231,87 +190,6 @@ const recordingAttachment = computed(() => {
     transcribedText: call.value?.transcript || '',
   };
 });
-
-const handleJoinCall = async () => {
-  if (!canJoinCall.value || isJoining.value) return;
-
-  if (hasActiveCall.value && activeCall.value?.callSid !== callSid.value) {
-    await endCall({
-      conversationId: activeCall.value.conversationId,
-      inboxId: activeCall.value.inboxId,
-      callSid: activeCall.value.callSid,
-    });
-  }
-
-  // The store skips calls that rang while the agent was away or were dismissed; register it so joinCall picks the right provider.
-  callsStore.addCall({
-    callSid: callSid.value,
-    callId: call.value?.id,
-    provider: call.value?.provider,
-    conversationId: conversationId.value,
-    inboxId: inboxId.value,
-    callDirection: VOICE_CALL_DIRECTION.INBOUND,
-  });
-
-  await joinCall({
-    conversationId: conversationId.value,
-    inboxId: inboxId.value,
-    callSid: callSid.value,
-  });
-};
-
-const canCallBack = computed(
-  () =>
-    isMissedInbound.value &&
-    !!inboxId.value &&
-    !!conversationId.value &&
-    !hasActiveCall.value &&
-    !callsStore.hasIncomingCall
-);
-
-const handleCallBack = async () => {
-  if (!canCallBack.value || isInitiatingCall.value) return;
-  try {
-    if (isWhatsapp.value) {
-      const response = await whatsappCallSession.initiateOutboundCall({
-        conversationId: conversationId.value,
-      });
-      if (response?.status === VOICE_CALL_OUTBOUND_INIT_STATUS.LOCKED) return;
-      // Permission template path returns no call id — show banner, no widget yet.
-      if (!response?.id) {
-        useAlert(
-          response?.status ===
-            VOICE_CALL_OUTBOUND_INIT_STATUS.PERMISSION_PENDING
-            ? t('CONVERSATION.HEADER.WHATSAPP_CALL_PERMISSION_PENDING')
-            : t('CONVERSATION.HEADER.WHATSAPP_CALL_PERMISSION_REQUESTED')
-        );
-        return;
-      }
-      callsStore.addCall({
-        callSid: response.call_id,
-        callId: response.id,
-        conversationId: conversationId.value,
-        inboxId: inboxId.value,
-        callDirection: VOICE_CALL_DIRECTION.OUTBOUND,
-        provider: VOICE_CALL_PROVIDERS.WHATSAPP,
-      });
-      return;
-    }
-    const response = await store.dispatch('contacts/initiateCall', {
-      contactId: sender.value?.id,
-      inboxId: inboxId.value,
-      conversationId: conversationId.value,
-    });
-    callsStore.addCall({
-      callSid: response?.call_sid,
-      conversationId: response?.conversation_id ?? conversationId.value,
-      inboxId: inboxId.value,
-      callDirection: VOICE_CALL_DIRECTION.OUTBOUND,
-    });
-  } catch (error) {
-    useAlert(error?.message || t('CONTACT_PANEL.CALL_FAILED'));
-  }
-};
 </script>
 
 <template>
@@ -345,30 +223,6 @@ const handleCallBack = async () => {
         v-if="recordingAttachment"
         :attachment="recordingAttachment"
         show-transcribed-text
-      />
-
-      <!-- Call back button (missed inbound) -->
-      <NextButton
-        v-if="canCallBack"
-        type="button"
-        :label="$t('CONVERSATION.VOICE_CALL.CALL_BACK')"
-        icon="i-ph-phone-bold"
-        teal
-        class="!rounded-full"
-        :disabled="isInitiatingCall"
-        @click="handleCallBack"
-      />
-
-      <!-- Join call button (ringing inbound) -->
-      <NextButton
-        v-if="canJoinCall"
-        type="button"
-        :label="$t('CONVERSATION.VOICE_CALL.JOIN_CALL')"
-        icon="i-ph-phone-bold"
-        teal
-        class="!rounded-full"
-        :disabled="isJoining"
-        @click="handleJoinCall"
       />
     </div>
   </BaseBubble>

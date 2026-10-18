@@ -18,10 +18,6 @@ vi.mock('dashboard/composables/useAccount', async () => {
   return { useAccount: () => ({ accountId: createRef(1) }) };
 });
 
-vi.mock('dashboard/stores/calls', () => ({
-  useCallsStore: () => ({ hasActiveCall: false, hasIncomingCall: false }),
-}));
-
 const RoutedContent = { template: '<div class="routed-content" />' };
 
 const ROUTES = [
@@ -100,7 +96,6 @@ describe('Dashboard', () => {
           MobileSidebarLauncher: true,
           CopilotLauncher: true,
           CopilotContainer: true,
-          FloatingCallWidget: true,
           AddAccountModal: true,
           WootKeyShortcutModal: true,
         },

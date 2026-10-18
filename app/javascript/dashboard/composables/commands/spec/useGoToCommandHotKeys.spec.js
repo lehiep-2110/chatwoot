@@ -12,10 +12,6 @@ vi.mock('vue-router');
 vi.mock('dashboard/composables/usePolicy');
 
 const ROUTE_META = {
-  calls_dashboard_index: {
-    permissions: ['administrator', 'agent'],
-    installationTypes: ['cloud', 'enterprise'],
-  },
   portals_index: {
     featureFlag: MOCK_FEATURE_FLAGS.HELP_CENTER,
     permissions: ['administrator', 'knowledge_base_manage'],
@@ -199,14 +195,20 @@ describe('useGoToCommandHotKeys', () => {
     expect(ids).not.toContain('open_agent_reports');
   });
 
-  it('should drop commands whose route is not available on the installation', () => {
-    installationType = 'community';
-    const { goToCommandHotKeys } = useGoToCommandHotKeys();
+  it.each(['cloud', 'enterprise', 'community'])(
+    'should not offer calls navigation on %s installations',
+    type => {
+      installationType = type;
+      const { goToCommandHotKeys } = useGoToCommandHotKeys();
 
-    expect(
-      goToCommandHotKeys.value.find(cmd => cmd.id === 'goto_calls_dashboard')
-    ).toBeUndefined();
-  });
+      expect(goToCommandHotKeys.value.map(cmd => cmd.id)).not.toContain(
+        'goto_calls_dashboard'
+      );
+      expect(useRouter().resolve).not.toHaveBeenCalledWith(
+        expect.objectContaining({ name: 'calls_dashboard_index' })
+      );
+    }
+  );
 
   it('should only keep routes that bypass the upgrade page when paywalled', () => {
     const { goToCommandHotKeys } = useGoToCommandHotKeys(ref(true));

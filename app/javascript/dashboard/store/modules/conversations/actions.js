@@ -15,11 +15,7 @@ import messageReadActions from './actions/messageReadActions';
 import messageTranslateActions from './actions/messageTranslateActions';
 import * as Sentry from '@sentry/vue';
 import { useAbortableRequest } from 'dashboard/composables/useAbortableRequest';
-import {
-  handleVoiceCallCreated,
-  handleVoiceCallUpdated,
-  syncConversationCallVisibility,
-} from 'dashboard/helper/voice';
+import { handleVoiceCallUpdated } from 'dashboard/helper/voice';
 
 // Page size MessageFinder uses when walking backwards through a conversation.
 const MESSAGES_PER_PAGE = 20;
@@ -433,7 +429,7 @@ const actions = {
     return data;
   },
 
-  addMessage({ commit, rootGetters }, message) {
+  addMessage({ commit }, message) {
     commit(types.ADD_MESSAGE, message);
     if (message.message_type === MESSAGE_TYPE.INCOMING) {
       commit(types.SET_CONVERSATION_CAN_REPLY, {
@@ -442,14 +438,9 @@ const actions = {
       });
       commit(types.ADD_CONVERSATION_ATTACHMENTS, message);
     }
-    handleVoiceCallCreated(
-      message,
-      rootGetters?.getCurrentUserID,
-      rootGetters?.getCurrentUserAvailability
-    );
   },
 
-  updateMessage({ commit, dispatch, rootGetters, state }, message) {
+  updateMessage({ commit, dispatch, state }, message) {
     commit(types.ADD_MESSAGE, message);
 
     const contactInfoRequest =
@@ -468,12 +459,7 @@ const actions = {
       );
     }
 
-    handleVoiceCallUpdated(
-      commit,
-      message,
-      rootGetters?.getCurrentUserID,
-      rootGetters?.getCurrentUserAvailability
-    );
+    handleVoiceCallUpdated(commit, message);
   },
 
   deleteMessage: async function deleteLabels(
@@ -533,11 +519,10 @@ const actions = {
     }
   },
 
-  updateConversation({ commit, dispatch, rootGetters }, conversation) {
+  updateConversation({ commit, dispatch }, conversation) {
     const sender = conversation.meta?.sender;
 
     commit(types.UPDATE_CONVERSATION, conversation);
-    syncConversationCallVisibility(conversation, rootGetters?.getCurrentUserID);
 
     dispatch('conversationLabels/setConversationLabel', {
       id: conversation.id,
