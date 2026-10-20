@@ -6,7 +6,6 @@ export const CONVERSATION_EVENTS = Object.freeze({
   TRANSLATE_A_MESSAGE: 'Translated a message',
   INSERTED_A_VARIABLE: 'Inserted a variable',
   INSERTED_AN_EMOJI: 'Inserted an emoji',
-  INSERTED_A_TOOL: 'Inserted a tool',
   USED_MENTIONS: 'Used mentions',
   SEARCH_CONVERSATION: 'Searched conversations',
   APPLY_FILTER: 'Applied filters in the conversation list',
@@ -79,41 +78,6 @@ export const PORTALS_EVENTS = Object.freeze({
   ARCHIVE_ARTICLE: 'Archived an article',
   DELETE_ARTICLE: 'Deleted an article',
   PREVIEW_ARTICLE: 'Previewed article',
-});
-
-export const CAPTAIN_EVENTS = Object.freeze({
-  // Editor funnel events
-  EDITOR_AI_MENU_OPENED: 'Captain: Editor AI menu opened',
-  GENERATION_FAILED: 'Captain: Generation failed',
-  AI_ASSISTED_MESSAGE_SENT: 'Captain: AI-assisted message sent',
-
-  // Rewrite events (with operation attribute in payload)
-  REWRITE_USED: 'Captain: Rewrite used',
-  REWRITE_APPLIED: 'Captain: Rewrite applied',
-  REWRITE_DISMISSED: 'Captain: Rewrite dismissed',
-
-  // Summarize events
-  SUMMARIZE_USED: 'Captain: Summarize used',
-  SUMMARIZE_APPLIED: 'Captain: Summarize applied',
-  SUMMARIZE_DISMISSED: 'Captain: Summarize dismissed',
-
-  // Reply suggestion events
-  REPLY_SUGGESTION_USED: 'Captain: Reply suggestion used',
-  REPLY_SUGGESTION_APPLIED: 'Captain: Reply suggestion applied',
-  REPLY_SUGGESTION_DISMISSED: 'Captain: Reply suggestion dismissed',
-
-  // Follow-up events
-  FOLLOW_UP_SENT: 'Captain: Follow-up sent',
-
-  // Label suggestions
-  LABEL_SUGGESTION_APPLIED: 'Captain: Label suggestion applied',
-  LABEL_SUGGESTION_DISMISSED: 'Captain: Label suggestion dismissed',
-});
-
-export const COPILOT_EVENTS = Object.freeze({
-  SEND_SUGGESTED: 'Copilot: Send suggested message',
-  SEND_MESSAGE: 'Copilot: Sent a message',
-  USE_CAPTAIN_RESPONSE: 'Copilot: Used captain response',
 });
 
 export const SNOOZE_EVENTS = Object.freeze({

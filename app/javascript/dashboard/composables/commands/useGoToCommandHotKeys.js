@@ -5,7 +5,6 @@ import { useRouter } from 'vue-router';
 import { usePolicy } from 'dashboard/composables/usePolicy';
 import {
   ICON_BLOCKS,
-  ICON_BOT,
   ICON_BRIEFCASE,
   ICON_CLOCK_ALERT,
   ICON_CODE,
@@ -49,14 +48,6 @@ const GO_TO_COMMANDS = [
     section: SECTION_GENERAL,
     icon: ICON_CONTACT,
     routeName: 'contacts_dashboard_index',
-  },
-  {
-    id: 'goto_captain',
-    title: 'COMMAND_BAR.COMMANDS.GO_TO_CAPTAIN',
-    section: SECTION_GENERAL,
-    icon: ICON_BOT,
-    routeName: 'captain_assistants_index',
-    params: { navigationPath: 'captain_assistants_overview_index' },
   },
   {
     id: 'open_agent_settings',

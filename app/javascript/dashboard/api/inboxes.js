@@ -59,12 +59,6 @@ class Inboxes extends CacheEnabledApiClient {
     return axios.get(`${this.url}/${inboxId}/csat_template`);
   }
 
-  analyzeCSATTemplateUtility(inboxId, template) {
-    return axios.post(`${this.url}/${inboxId}/csat_template/analyze`, {
-      template,
-    });
-  }
-
   resetSecret(inboxId) {
     return axios.post(`${this.url}/${inboxId}/reset_secret`);
   }

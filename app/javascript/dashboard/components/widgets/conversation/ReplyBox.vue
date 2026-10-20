@@ -11,8 +11,6 @@ import AttachmentPreview from 'dashboard/components/widgets/AttachmentsPreview.v
 import ReplyTopPanel from 'dashboard/components/widgets/WootWriter/ReplyTopPanel.vue';
 import ReplyEmailHead from './ReplyEmailHead.vue';
 import ReplyBottomPanel from 'dashboard/components/widgets/WootWriter/ReplyBottomPanel.vue';
-import CopilotReplyBottomPanel from 'dashboard/components/widgets/WootWriter/CopilotReplyBottomPanel.vue';
-import CopilotEditorSection from './CopilotEditorSection.vue';
 import MessageSignatureMissingAlert from './MessageSignatureMissingAlert.vue';
 import ReplyBoxBanner from './ReplyBoxBanner.vue';
 import QuotedEmailPreview from './QuotedEmailPreview.vue';
@@ -21,7 +19,6 @@ import WootMessageEditor from 'dashboard/components/widgets/WootWriter/Editor.vu
 import AudioRecorder from 'dashboard/components/widgets/WootWriter/AudioRecorder.vue';
 import { AUDIO_FORMATS } from 'shared/constants/messages';
 import { BUS_EVENTS } from 'shared/constants/busEvents';
-import { CMD_AI_ASSIST } from 'dashboard/helper/commandbar/events';
 import {
   getMessageVariables,
   getUndefinedVariablesInMessage,
@@ -38,10 +35,7 @@ import {
   truncatePreviewText,
   appendQuotedTextToMessage,
 } from 'dashboard/helper/quotedEmailHelper';
-import {
-  CONVERSATION_EVENTS,
-  CAPTAIN_EVENTS,
-} from '../../../helper/AnalyticsHelper/events';
+import { CONVERSATION_EVENTS } from '../../../helper/AnalyticsHelper/events';
 import fileUploadMixin from 'dashboard/mixins/fileUploadMixin';
 import {
   appendSignature,
@@ -50,7 +44,6 @@ import {
   getAgentVariables,
   getContactVariables,
 } from 'dashboard/helper/editorHelper';
-import { useCopilotReply } from 'dashboard/composables/useCopilotReply';
 import { useMacroExecution } from 'dashboard/composables/useMacroExecution';
 import ConversationResolveAttributesModal from 'dashboard/components-next/ConversationWorkflow/ConversationResolveAttributesModal.vue';
 import { useKbd } from 'dashboard/composables/utils/useKbd';
@@ -80,8 +73,6 @@ export default {
     WhatsappTemplates,
     WootMessageEditor,
     QuotedEmailPreview,
-    CopilotEditorSection,
-    CopilotReplyBottomPanel,
     ConversationResolveAttributesModal,
   },
   mixins: [inboxMixin, fileUploadMixin],
@@ -96,7 +87,6 @@ export default {
     } = useUISettings();
 
     const messageEditor = useTemplateRef('messageEditor');
-    const copilot = useCopilotReply();
     const macroExecution = useMacroExecution();
     const shortcutKey = useKbd(['$mod', '+', 'enter']);
 
@@ -126,9 +116,7 @@ export default {
       },
       '$mod+Enter': {
         action: () => {
-          if (copilot.isActive.value && proxy.isFocused) {
-            proxy.onSubmitCopilotReply();
-          } else if (proxy.isAValidEvent('cmd_enter')) {
+          if (proxy.isAValidEvent('cmd_enter')) {
             proxy.onSendReply();
           }
         },
@@ -143,7 +131,6 @@ export default {
       setQuotedReplyFlagForInbox,
       fetchQuotedReplyFlagFromUISettings,
       messageEditor,
-      copilot,
       shortcutKey,
       macroExecution,
     };
@@ -177,7 +164,6 @@ export default {
       showMacrosMenu: false,
       newConversationModalActive: false,
       hasRecordedAudio: false,
-      copilotAcceptedMessages: {},
     };
   },
   computed: {
@@ -207,8 +193,7 @@ export default {
         this.inReplyTo?.id &&
         !this.isPrivate &&
         this.inboxHasFeature(INBOX_FEATURES.REPLY_TO) &&
-        !this.is360DialogWhatsAppChannel &&
-        !this.copilot.isActive.value
+        !this.is360DialogWhatsAppChannel
       );
     },
     showWhatsappTemplates() {
@@ -257,21 +242,6 @@ export default {
       return this.isOnPrivateNote
         ? REPLY_EDITOR_MODES.NOTE
         : REPLY_EDITOR_MODES.REPLY;
-    },
-    hasMeaningfulEditorContent() {
-      const body = this.message || '';
-      // Only strip the signature when it's actually being auto-appended.
-      // If the toggle is off, the agent's text might happen to match their
-      // saved signature and we'd incorrectly treat it as empty.
-      const shouldStripSignature =
-        !this.isPrivate && this.sendWithSignature && !!this.messageSignature;
-      if (!shouldStripSignature) return !!body.trim();
-      const stripped = removeSignature(
-        body,
-        this.messageSignature,
-        getEffectiveChannelType(this.channelType, this.inbox?.medium || '')
-      );
-      return !!stripped.trim();
     },
     isBotOwnedPendingConversation() {
       return (
@@ -512,7 +482,7 @@ export default {
       );
     },
     isDefaultEditorMode() {
-      return !this.showAudioRecorderEditor && !this.copilot.isActive.value;
+      return !this.showAudioRecorderEditor;
     },
     isEditorDisabled() {
       return (
@@ -529,8 +499,6 @@ export default {
         // This prevents overwriting user input (e.g., CC/BCC fields) when performing actions
         // like self-assign or other updates that do not actually change the conversation context
         this.setCCAndToEmailsFromLastChat();
-        // Reset Copilot editor state (includes cancelling ongoing generation)
-        this.copilot.reset();
       }
 
       if (this.isInstagramReplyRestricted) {
@@ -618,7 +586,6 @@ export default {
       BUS_EVENTS.NEW_CONVERSATION_MODAL,
       this.onNewConversationModalActive
     );
-    emitter.on(CMD_AI_ASSIST, this.executeCopilotAction);
   },
   unmounted() {
     document.removeEventListener('paste', this.onPaste);
@@ -627,7 +594,6 @@ export default {
       BUS_EVENTS.NEW_CONVERSATION_MODAL,
       this.onNewConversationModalActive
     );
-    emitter.off(CMD_AI_ASSIST, this.executeCopilotAction);
   },
   methods: {
     openContactInfoTemplateModal() {
@@ -639,21 +605,6 @@ export default {
       replyType = this.effectiveReplyMode
     ) {
       return `draft-${conversationId}-${replyType}`;
-    },
-    getCopilotAcceptedMessage(replyType = this.effectiveReplyMode) {
-      const key = this.getDraftKey(this.conversationIdByRoute, replyType);
-      return this.copilotAcceptedMessages[key] || '';
-    },
-    setCopilotAcceptedMessage(message, replyType = this.effectiveReplyMode) {
-      const key = this.getDraftKey(this.conversationIdByRoute, replyType);
-      this.copilotAcceptedMessages[key] = trimContent(
-        message || '',
-        this.maxLength
-      );
-    },
-    clearCopilotAcceptedMessage(replyType = this.effectiveReplyMode) {
-      const key = this.getDraftKey(this.conversationIdByRoute, replyType);
-      delete this.copilotAcceptedMessages[key];
     },
     toggleQuotedReply() {
       if (!this.isAnEmailChannel) {
@@ -843,7 +794,6 @@ export default {
         return;
       }
       if (!this.showMentions) {
-        const copilotAcceptedMessage = this.getCopilotAcceptedMessage();
         const isOnWhatsApp =
           this.isATwilioWhatsAppChannel ||
           this.isAWhatsAppCloudChannel ||
@@ -855,17 +805,10 @@ export default {
         const isOnInstagram = this.isAnInstagramChannel;
         const isOnTiktok = this.isATiktokChannel;
         if ((isOnWhatsApp || isOnInstagram || isOnTiktok) && !this.isPrivate) {
-          this.sendMessageAsMultipleMessages(
-            this.message,
-            copilotAcceptedMessage
-          );
+          this.sendMessageAsMultipleMessages(this.message);
         } else {
           const messagePayload = this.getMessagePayload(this.message);
-          this.sendMessage(
-            messagePayload,
-            this.message,
-            copilotAcceptedMessage
-          );
+          this.sendMessage(messagePayload);
         }
 
         if (!this.isPrivate) {
@@ -876,53 +819,13 @@ export default {
         this.hideEmojiPicker();
       }
     },
-    sendMessageAsMultipleMessages(message, copilotAcceptedMessage = '') {
+    sendMessageAsMultipleMessages(message) {
       const messages = this.getMultipleMessagesPayload(message);
       messages.forEach(messagePayload => {
-        this.sendMessage(
-          messagePayload,
-          messagePayload.message || '',
-          copilotAcceptedMessage
-        );
+        this.sendMessage(messagePayload);
       });
     },
-    sendMessageAnalyticsData(
-      isPrivate,
-      { editorMessage = '', copilotAcceptedMessage = '' } = {}
-    ) {
-      const normalizeForComparison = message => {
-        let normalizedMessage = message || '';
-
-        if (this.sendWithSignature && this.messageSignature && !isPrivate) {
-          const effectiveChannelType = getEffectiveChannelType(
-            this.channelType,
-            this.inbox?.medium || ''
-          );
-          normalizedMessage = removeSignature(
-            normalizedMessage,
-            this.messageSignature,
-            effectiveChannelType
-          );
-        }
-
-        return trimContent(normalizedMessage);
-      };
-
-      const normalizedAcceptedMessage = normalizeForComparison(
-        copilotAcceptedMessage
-      );
-      const normalizedEditorMessage = normalizeForComparison(editorMessage);
-
-      if (normalizedAcceptedMessage && normalizedEditorMessage) {
-        useTrack(CAPTAIN_EVENTS.AI_ASSISTED_MESSAGE_SENT, {
-          conversationId: this.conversationIdByRoute,
-          channelType: this.channelType,
-          editedBeforeSend:
-            normalizedAcceptedMessage !== normalizedEditorMessage,
-          isPrivate,
-        });
-      }
-
+    sendMessageAnalyticsData(isPrivate) {
       // Analytics data for message signature is enabled or not in channels
       return isPrivate
         ? useTrack(CONVERSATION_EVENTS.SENT_PRIVATE_NOTE)
@@ -956,11 +859,7 @@ export default {
         this.confirmOnSendReply();
       }
     },
-    async sendMessage(
-      messagePayload,
-      editorMessage = '',
-      copilotAcceptedMessage = ''
-    ) {
+    async sendMessage(messagePayload) {
       try {
         await this.$store.dispatch(
           'createPendingMessageAndSend',
@@ -969,10 +868,7 @@ export default {
         emitter.emit(BUS_EVENTS.SCROLL_TO_MESSAGE);
         emitter.emit(BUS_EVENTS.MESSAGE_SENT);
         this.removeFromDraft();
-        this.sendMessageAnalyticsData(messagePayload.private, {
-          editorMessage,
-          copilotAcceptedMessage,
-        });
+        this.sendMessageAnalyticsData(messagePayload.private);
       } catch (error) {
         const errorMessage =
           error?.response?.data?.error || this.$t('CONVERSATION.MESSAGE_ERROR');
@@ -1011,12 +907,8 @@ export default {
       this.updateEditorSelectionWith = content;
       this.onFocus();
     },
-    executeCopilotAction(action, data) {
-      this.copilot.execute(action, data);
-    },
     clearMessage() {
       this.message = '';
-      this.clearCopilotAcceptedMessage();
       if (this.sendWithSignature && !this.isPrivate) {
         // if signature is enabled, append it to the message
         const effectiveChannelType = getEffectiveChannelType(
@@ -1297,11 +1189,6 @@ export default {
       this.$emit('toggleEditorSize');
       this.$nextTick(() => this.messageEditor?.focusEditorInputField());
     },
-    onSubmitCopilotReply() {
-      const acceptedMessage = this.copilot.accept();
-      this.message = acceptedMessage;
-      this.setCopilotAcceptedMessage(acceptedMessage);
-    },
   },
 };
 </script>
@@ -1311,190 +1198,135 @@ export default {
   <div class="reply-box" :class="replyBoxClass">
     <ReplyTopPanel
       :mode="replyType"
-      :conversation-id="conversationId"
       :is-reply-restricted="!canSendPublicReply"
-      :disabled="
-        (copilot.isActive.value && copilot.isButtonDisabled.value) ||
-        showAudioRecorderEditor
-      "
-      :is-editor-disabled="isEditorDisabled"
+      :disabled="showAudioRecorderEditor"
       :is-message-length-reaching-threshold="isMessageLengthReachingThreshold"
       :characters-remaining="charactersRemaining"
-      :editor-content="message"
-      :has-content="hasMeaningfulEditorContent"
       @set-reply-mode="setReplyMode"
       @toggle-editor-size="toggleEditorSize"
-      @toggle-copilot="copilot.toggleEditor"
-      @execute-copilot-action="executeCopilotAction"
     />
-    <Transition
-      mode="out-in"
-      enter-active-class="transition-all duration-300 ease-out"
-      enter-from-class="opacity-0 translate-y-2 scale-[0.98]"
-      enter-to-class="opacity-100 translate-y-0 scale-100"
-      leave-active-class="transition-all duration-200 ease-in"
-      leave-from-class="opacity-100 translate-y-0 scale-100"
-      leave-to-class="opacity-0 translate-y-2 scale-[0.98]"
-    >
-      <div :key="copilot.editorTransitionKey.value" class="reply-box__top">
-        <ReplyToMessage
-          v-if="shouldShowReplyToMessage"
-          :message="inReplyTo"
-          @dismiss="resetReplyToMessage"
-        />
-        <EmojiIconPicker
-          v-if="showEmojiPicker"
-          v-on-clickaway="hideEmojiPicker"
-          mode="emoji"
-          class="emoji-dialog"
-          :class="{
-            'emoji-dialog--expanded': isOnExpandedLayout,
-          }"
-          @select="addIntoEditor($event.value)"
-        />
-        <ReplyEmailHead
-          v-if="showReplyHead && isDefaultEditorMode"
-          v-model:cc-emails="ccEmails"
-          v-model:bcc-emails="bccEmails"
-          v-model:to-emails="toEmails"
-        />
-        <AudioRecorder
-          v-if="showAudioRecorderEditor"
-          ref="audioRecorderInput"
-          :audio-record-format="audioRecordFormat"
-          @recorder-progress-changed="onRecordProgressChanged"
-          @finish-record="onFinishRecorder"
-          @record-error="onRecordError"
-          @play="recordingAudioState = 'playing'"
-          @pause="recordingAudioState = 'paused'"
-        />
-        <CopilotEditorSection
-          v-if="copilot.isActive.value && !showAudioRecorderEditor"
-          :show-copilot-editor="copilot.showEditor.value"
-          :is-generating-content="copilot.isGenerating.value"
-          :generated-content="copilot.generatedContent.value"
-          :placeholder="$t('CONVERSATION.FOOTER.COPILOT_MSG_INPUT')"
-          @focus="onFocus"
-          @blur="onBlur"
-          @clear-selection="clearEditorSelection"
-          @close="copilot.showEditor.value = false"
-          @content-ready="copilot.setContentReady"
-          @send="copilot.sendFollowUp"
-        />
-        <WootMessageEditor
-          v-else-if="!showAudioRecorderEditor"
-          ref="messageEditor"
-          v-model="message"
-          :conversation-id="conversationId"
-          :editor-id="editorStateId"
-          class="input popover-prosemirror-menu"
-          :is-private="isOnPrivateNote"
-          :placeholder="messagePlaceHolder"
-          :update-selection-with="updateEditorSelectionWith"
-          :min-height="4"
-          :disabled="isEditorDisabled"
-          enable-insert-events
-          :enable-macros="isMacrosEnabled"
-          enable-variables
-          :variables="messageVariables"
-          :signature="messageSignature"
-          allow-signature
-          :channel-type="channelType"
-          :medium="inbox.medium"
-          @typing-off="onTypingOff"
-          @typing-on="onTypingOn"
-          @focus="onFocus"
-          @blur="onBlur"
-          @toggle-user-mention="toggleUserMention"
-          @toggle-canned-menu="toggleCannedMenu"
-          @toggle-variables-menu="toggleVariablesMenu"
-          @toggle-macros-menu="toggleMacrosMenu"
-          @execute-macro="onExecuteMacro"
-          @clear-selection="clearEditorSelection"
-          @execute-copilot-action="executeCopilotAction"
-        />
+    <div class="reply-box__top">
+      <ReplyToMessage
+        v-if="shouldShowReplyToMessage"
+        :message="inReplyTo"
+        @dismiss="resetReplyToMessage"
+      />
+      <EmojiIconPicker
+        v-if="showEmojiPicker"
+        v-on-clickaway="hideEmojiPicker"
+        mode="emoji"
+        class="emoji-dialog"
+        :class="{
+          'emoji-dialog--expanded': isOnExpandedLayout,
+        }"
+        @select="addIntoEditor($event.value)"
+      />
+      <ReplyEmailHead
+        v-if="showReplyHead && isDefaultEditorMode"
+        v-model:cc-emails="ccEmails"
+        v-model:bcc-emails="bccEmails"
+        v-model:to-emails="toEmails"
+      />
+      <AudioRecorder
+        v-if="showAudioRecorderEditor"
+        ref="audioRecorderInput"
+        :audio-record-format="audioRecordFormat"
+        @recorder-progress-changed="onRecordProgressChanged"
+        @finish-record="onFinishRecorder"
+        @record-error="onRecordError"
+        @play="recordingAudioState = 'playing'"
+        @pause="recordingAudioState = 'paused'"
+      />
+      <WootMessageEditor
+        v-else
+        ref="messageEditor"
+        v-model="message"
+        :editor-id="editorStateId"
+        class="input popover-prosemirror-menu"
+        :is-private="isOnPrivateNote"
+        :placeholder="messagePlaceHolder"
+        :update-selection-with="updateEditorSelectionWith"
+        :min-height="4"
+        :disabled="isEditorDisabled"
+        enable-insert-events
+        :enable-macros="isMacrosEnabled"
+        enable-variables
+        :variables="messageVariables"
+        :signature="messageSignature"
+        allow-signature
+        :channel-type="channelType"
+        :medium="inbox.medium"
+        @typing-off="onTypingOff"
+        @typing-on="onTypingOn"
+        @focus="onFocus"
+        @blur="onBlur"
+        @toggle-user-mention="toggleUserMention"
+        @toggle-canned-menu="toggleCannedMenu"
+        @toggle-variables-menu="toggleVariablesMenu"
+        @toggle-macros-menu="toggleMacrosMenu"
+        @execute-macro="onExecuteMacro"
+        @clear-selection="clearEditorSelection"
+      />
 
-        <QuotedEmailPreview
-          v-if="shouldShowQuotedPreview && isDefaultEditorMode"
-          :quoted-email-text="quotedEmailText"
-          :preview-text="quotedEmailPreviewText"
-          class="mb-2"
-          @toggle="toggleQuotedReply"
-        />
+      <QuotedEmailPreview
+        v-if="shouldShowQuotedPreview && isDefaultEditorMode"
+        :quoted-email-text="quotedEmailText"
+        :preview-text="quotedEmailPreviewText"
+        class="mb-2"
+        @toggle="toggleQuotedReply"
+      />
 
-        <div
-          v-if="hasAttachments && isDefaultEditorMode"
-          class="bg-transparent py-0 mb-2"
-          @paste="onPaste"
-        >
-          <AttachmentPreview
-            class="mt-2"
-            :attachments="attachedFiles"
-            @remove-attachment="removeAttachment"
-          />
-        </div>
-        <MessageSignatureMissingAlert
-          v-if="
-            isSignatureEnabledForInbox &&
-            !isSignatureAvailable &&
-            isDefaultEditorMode
-          "
-          class="mb-2"
+      <div
+        v-if="hasAttachments && isDefaultEditorMode"
+        class="bg-transparent py-0 mb-2"
+        @paste="onPaste"
+      >
+        <AttachmentPreview
+          class="mt-2"
+          :attachments="attachedFiles"
+          @remove-attachment="removeAttachment"
         />
       </div>
-    </Transition>
-
-    <Transition
-      mode="out-in"
-      enter-active-class="transition-all duration-300 ease-out"
-      enter-from-class="opacity-0 translate-y-2 scale-[0.98]"
-      enter-to-class="opacity-100 translate-y-0 scale-100"
-      leave-active-class="transition-all duration-200 ease-in"
-      leave-from-class="opacity-100 translate-y-0 scale-100"
-      leave-to-class="opacity-0 translate-y-2 scale-[0.98]"
-    >
-      <CopilotReplyBottomPanel
-        v-if="copilot.isActive.value"
-        key="copilot-bottom-panel"
-        :is-generating-content="copilot.isButtonDisabled.value"
-        @submit="onSubmitCopilotReply"
-        @cancel="copilot.reset"
+      <MessageSignatureMissingAlert
+        v-if="
+          isSignatureEnabledForInbox &&
+          !isSignatureAvailable &&
+          isDefaultEditorMode
+        "
+        class="mb-2"
       />
-      <ReplyBottomPanel
-        v-else
-        key="reply-bottom-panel"
-        :enable-multiple-file-upload="enableMultipleFileUpload"
-        :enable-whats-app-templates="showWhatsappTemplates"
-        :enable-content-templates="showContentTemplates"
-        :inbox="inbox"
-        :is-on-private-note="isOnPrivateNote"
-        :is-recording-audio="isRecordingAudio"
-        :is-send-disabled="isReplyButtonDisabled"
-        :is-note="isPrivate"
-        :is-editor-disabled="isEditorDisabled"
-        :on-file-upload="onFileUpload"
-        :on-send="onSendReply"
-        :conversation-type="conversationType"
-        :recording-audio-duration-text="recordingAudioDurationText"
-        :recording-audio-state="recordingAudioState"
-        :send-button-text="replyButtonLabel"
-        :show-audio-recorder="showAudioRecorder"
-        :show-emoji-picker="showEmojiPicker"
-        :show-file-upload="showFileUpload"
-        :show-quoted-reply-toggle="shouldShowQuotedReplyToggle"
-        :quoted-reply-enabled="quotedReplyPreference"
-        :toggle-audio-recorder-play-pause="toggleAudioRecorderPlayPause"
-        :toggle-audio-recorder="toggleAudioRecorder"
-        :toggle-emoji-picker="toggleEmojiPicker"
-        :message="message"
-        :new-conversation-modal-active="newConversationModalActive"
-        @select-whatsapp-template="openWhatsappTemplateModal"
-        @select-content-template="openContentTemplateModal"
-        @toggle-quoted-reply="toggleQuotedReply"
-        @request-contact-info-template="openContactInfoTemplateModal"
-      />
-    </Transition>
-
+    </div>
+    <ReplyBottomPanel
+      :enable-multiple-file-upload="enableMultipleFileUpload"
+      :enable-whats-app-templates="showWhatsappTemplates"
+      :enable-content-templates="showContentTemplates"
+      :inbox="inbox"
+      :is-on-private-note="isOnPrivateNote"
+      :is-recording-audio="isRecordingAudio"
+      :is-send-disabled="isReplyButtonDisabled"
+      :is-note="isPrivate"
+      :is-editor-disabled="isEditorDisabled"
+      :on-file-upload="onFileUpload"
+      :on-send="onSendReply"
+      :conversation-type="conversationType"
+      :recording-audio-duration-text="recordingAudioDurationText"
+      :recording-audio-state="recordingAudioState"
+      :send-button-text="replyButtonLabel"
+      :show-audio-recorder="showAudioRecorder"
+      :show-emoji-picker="showEmojiPicker"
+      :show-file-upload="showFileUpload"
+      :show-quoted-reply-toggle="shouldShowQuotedReplyToggle"
+      :quoted-reply-enabled="quotedReplyPreference"
+      :toggle-audio-recorder-play-pause="toggleAudioRecorderPlayPause"
+      :toggle-audio-recorder="toggleAudioRecorder"
+      :toggle-emoji-picker="toggleEmojiPicker"
+      :message="message"
+      :new-conversation-modal-active="newConversationModalActive"
+      @select-whatsapp-template="openWhatsappTemplateModal"
+      @select-content-template="openContentTemplateModal"
+      @toggle-quoted-reply="toggleQuotedReply"
+      @request-contact-info-template="openContactInfoTemplateModal"
+    />
     <WhatsappTemplates
       :inbox-id="inbox.id"
       :show="showWhatsAppTemplatesModal"

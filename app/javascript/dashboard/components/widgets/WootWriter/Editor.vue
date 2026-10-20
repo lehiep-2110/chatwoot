@@ -16,23 +16,16 @@ import KeyboardEmojiSelector from './keyboardEmojiSelector.vue';
 import TagAgents from '../conversation/TagAgents.vue';
 import VariableList from '../conversation/VariableList.vue';
 import MacroList from '../conversation/MacroList.vue';
-import TagTools from '../conversation/TagTools.vue';
-import CopilotMenuBar from './CopilotMenuBar.vue';
 
 import { useEmitter } from 'dashboard/composables/emitter';
 import { useI18n } from 'vue-i18n';
-import { useCaptain } from 'dashboard/composables/useCaptain';
 import { useKeyboardEvents } from 'dashboard/composables/useKeyboardEvents';
 import { useTrack } from 'dashboard/composables';
 import { useUISettings } from 'dashboard/composables/useUISettings';
 import { useAlert } from 'dashboard/composables';
-import { vOnClickOutside } from '@vueuse/components';
 
 import { BUS_EVENTS } from 'shared/constants/busEvents';
-import {
-  CONVERSATION_EVENTS,
-  CAPTAIN_EVENTS,
-} from 'dashboard/helper/AnalyticsHelper/events';
+import { CONVERSATION_EVENTS } from 'dashboard/helper/AnalyticsHelper/events';
 
 import {
   messageSchema,
@@ -86,7 +79,6 @@ const props = defineProps({
   updateSelectionWith: { type: String, default: '' },
   enableVariables: { type: Boolean, default: false },
   enableCannedResponses: { type: Boolean, default: true },
-  enableCaptainTools: { type: Boolean, default: false },
   enableMacros: { type: Boolean, default: false },
   variables: { type: Object, default: () => ({}) },
   signature: { type: String, default: '' },
@@ -94,11 +86,10 @@ const props = defineProps({
   // are triggered except when this flag is true
   allowSignature: { type: Boolean, default: false },
   channelType: { type: String, default: '' },
-  conversationId: { type: Number, default: null },
   medium: { type: String, default: '' },
   focusOnMount: { type: Boolean, default: true },
-  // Global INSERT_INTO_RICH_EDITOR bus events (Copilot "Use this", article
-  // links) are meant for the conversation reply editor only — other mounted
+  // Global INSERT_INTO_RICH_EDITOR bus events are meant for the conversation
+  // reply editor only — other mounted
   // editors (canned responses, signature, etc.) must not consume them.
   enableInsertEvents: { type: Boolean, default: false },
 });
@@ -109,7 +100,6 @@ const emit = defineEmits([
   'toggleUserMention',
   'toggleCannedMenu',
   'toggleVariablesMenu',
-  'toggleToolsMenu',
   'toggleMacrosMenu',
   'executeMacro',
   'clearSelection',
@@ -117,11 +107,9 @@ const emit = defineEmits([
   'focus',
   'input',
   'update:modelValue',
-  'executeCopilotAction',
 ]);
 
 const { t } = useI18n();
-const { captainTasksEnabled } = useCaptain();
 
 const TYPING_INDICATOR_IDLE_TIME = 4000;
 const MAXIMUM_FILE_UPLOAD_SIZE = 4; // in MB
@@ -146,10 +134,7 @@ const editorSchema = computed(() => {
   const formatType = props.isPrivate
     ? PRIVATE_NOTE_FORMATTING
     : effectiveChannelType.value;
-  const formatting = getFormattingForEditor(
-    formatType,
-    captainTasksEnabled.value
-  );
+  const formatting = getFormattingForEditor(formatType);
   return buildMessageSchema(formatting.marks, formatting.nodes);
 });
 
@@ -157,10 +142,7 @@ const editorMenuOptions = computed(() => {
   const formatType = props.isPrivate
     ? PRIVATE_NOTE_FORMATTING
     : effectiveChannelType.value || DEFAULT_FORMATTING;
-  const formatting = getFormattingForEditor(
-    formatType,
-    captainTasksEnabled.value
-  );
+  const formatting = getFormattingForEditor(formatType);
 
   return formatting.menu;
 });
@@ -201,9 +183,7 @@ const showUserMentions = ref(false);
 const showCannedMenu = ref(false);
 const showVariables = ref(false);
 const showEmojiMenu = ref(false);
-const showToolsMenu = ref(false);
 const showMacroMenu = ref(false);
-const toolSearchKey = ref('');
 const mentionSearchKey = ref('');
 const cannedSearchKey = ref('');
 const variableSearchKey = ref('');
@@ -211,7 +191,6 @@ const emojiSearchKey = ref('');
 const macroSearchKey = ref('');
 const range = ref(null);
 const isTextSelected = ref(false); // Tracks text selection and prevents unnecessary re-renders on mouse selection
-const showSelectionMenu = ref(false);
 
 // element ref
 const editorRoot = useTemplateRef('editorRoot');
@@ -233,21 +212,6 @@ const isEditorMenuPopover = computed(
   () =>
     editorRoot.value?.classList.contains('popover-prosemirror-menu') ?? false
 );
-
-const handleCopilotAction = actionKey => {
-  if (actionKey === 'improve_selection' && editorView?.state) {
-    const { from, to } = editorView.state.selection;
-    const selectedText = editorView.state.doc.textBetween(from, to).trim();
-
-    if (from !== to && selectedText) {
-      emit('executeCopilotAction', 'improve', selectedText);
-    }
-  } else {
-    emit('executeCopilotAction', actionKey, props.modelValue);
-  }
-
-  showSelectionMenu.value = false;
-};
 
 const contentFromEditor = () => {
   return MessageMarkdownSerializer.serialize(editorView.state.doc);
@@ -306,7 +270,6 @@ function createSuggestionPlugin({
   showMenu,
   searchTerm,
   isAllowed = () => true,
-  interceptEnter = false,
 }) {
   return suggestionsPlugin({
     matcher: triggerCharacters(trigger, minChars),
@@ -330,9 +293,6 @@ function createSuggestionPlugin({
       showMenu.value = false;
       return false;
     },
-    onKeyDown: ({ event }) => {
-      return event.keyCode === 13 && showMenu.value && interceptEnter;
-    },
   });
 }
 
@@ -344,16 +304,8 @@ const plugins = computed(() => {
   return [
     createSuggestionPlugin({
       trigger: '@',
-      showMenu: showToolsMenu,
-      searchTerm: toolSearchKey,
-      isAllowed: () => props.enableCaptainTools,
-      interceptEnter: true,
-    }),
-    createSuggestionPlugin({
-      trigger: '@',
       showMenu: showUserMentions,
       searchTerm: mentionSearchKey,
-      isAllowed: () => props.isPrivate || !props.enableCaptainTools,
     }),
     createSuggestionPlugin({
       trigger: '/',
@@ -413,10 +365,6 @@ watch(shouldShowVariables, updatedValue => {
 watch(shouldShowMacros, updatedValue => {
   emit('toggleMacrosMenu', updatedValue);
 });
-watch(showToolsMenu, updatedValue => {
-  emit('toggleToolsMenu', props.enableCaptainTools && updatedValue);
-});
-
 function focusEditorInputField(pos = 'end') {
   const { tr } = editorView.state;
 
@@ -489,30 +437,12 @@ function openFileBrowser() {
   imageUpload.value.click();
 }
 
-function handleCopilotClick() {
-  const isOpening = !showSelectionMenu.value;
-  if (isOpening) {
-    useTrack(CAPTAIN_EVENTS.EDITOR_AI_MENU_OPENED, {
-      conversationId: props.conversationId,
-      entryPoint: 'inline',
-    });
-  }
-  showSelectionMenu.value = isOpening;
-}
-
-function handleClickOutside(event) {
-  // Check if the clicked element or its parents have the ignored class
-  if (event.target.closest('.ProseMirror-copilot')) return;
-  showSelectionMenu.value = false;
-}
-
 function reloadState(content = props.modelValue) {
   range.value = null;
   showUserMentions.value = false;
   showCannedMenu.value = false;
   showVariables.value = false;
   showEmojiMenu.value = false;
-  showToolsMenu.value = false;
   showMacroMenu.value = false;
 
   const unrefContent = unref(content);
@@ -520,7 +450,7 @@ function reloadState(content = props.modelValue) {
     unrefContent,
     props.placeholder,
     plugins.value,
-    { onImageUpload: openFileBrowser, onCopilotClick: handleCopilotClick },
+    { onImageUpload: openFileBrowser },
     editorMenuOptions.value
   );
 
@@ -581,7 +511,6 @@ function setMenubarPosition({ selection } = {}) {
 }
 
 function checkSelection(editorState) {
-  showSelectionMenu.value = false;
   const { selection } = editorState;
   // Skip NodeSelection (from Esc -> selectParentNode); only text ranges count.
   const hasSelection = !selection.empty && !selection.node;
@@ -782,7 +711,6 @@ function insertSpecialContent(type, content) {
     cannedResponse: CONVERSATION_EVENTS.INSERTED_A_CANNED_RESPONSE,
     variable: CONVERSATION_EVENTS.INSERTED_A_VARIABLE,
     emoji: CONVERSATION_EVENTS.INSERTED_AN_EMOJI,
-    tool: CONVERSATION_EVENTS.INSERTED_A_TOOL,
   };
 
   useTrack(event_map[type]);
@@ -923,7 +851,7 @@ onMounted(() => {
     props.modelValue,
     props.placeholder,
     plugins.value,
-    { onImageUpload: openFileBrowser, onCopilotClick: handleCopilotClick },
+    { onImageUpload: openFileBrowser },
     editorMenuOptions.value
   );
 
@@ -997,23 +925,6 @@ useEmitter(BUS_EVENTS.INSERT_INTO_RICH_EDITOR, content => {
       @remove-trigger="removeSuggestionTrigger"
       @select-emoji="emoji => insertSpecialContent('emoji', emoji)"
     />
-    <TagTools
-      v-if="showToolsMenu"
-      :search-key="toolSearchKey"
-      @select-tool="content => insertSpecialContent('tool', content)"
-    />
-    <CopilotMenuBar
-      v-if="showSelectionMenu"
-      v-on-click-outside="handleClickOutside"
-      :has-selection="isTextSelected"
-      :is-editor-menu-popover="isEditorMenuPopover"
-      :has-content="!isBodyEmpty(modelValue)"
-      :conversation-id="conversationId"
-      :show-selection-menu="showSelectionMenu"
-      :show-general-menu="false"
-      class="copilot-editor-menu"
-      @execute-copilot-action="handleCopilotAction"
-    />
     <input
       ref="imageUpload"
       type="file"
@@ -1049,10 +960,6 @@ useEmitter(BUS_EVENTS.INSERT_INTO_RICH_EDITOR, content => {
         svg {
           @apply size-full;
         }
-      }
-
-      .ProseMirror-copilot svg {
-        @apply fill-n-violet-9 text-n-violet-9 stroke-none;
       }
     }
   }
@@ -1159,17 +1066,6 @@ useEmitter(BUS_EVENTS.INSERT_INTO_RICH_EDITOR, content => {
   @apply text-n-ruby-9 dark:text-n-ruby-9 font-normal text-sm pt-1 pb-0 px-0;
 }
 
-// Default copilot menu position (non-popover editors like components-next/Editor)
-// When popover-prosemirror-menu is NOT on the wrapper, anchor below the menubar
-:not(.popover-prosemirror-menu) > .copilot-editor-menu {
-  top: 1.5rem !important;
-
-  [dir='rtl'] & {
-    left: auto !important;
-    right: 0 !important;
-  }
-}
-
 // Float editor menu
 .popover-prosemirror-menu {
   position: relative;
@@ -1209,10 +1105,6 @@ useEmitter(BUS_EVENTS.INSERT_INTO_RICH_EDITOR, content => {
 
         .ProseMirror-icon {
           @apply p-0.5 flex-shrink-0;
-        }
-
-        .ProseMirror-copilot svg {
-          @apply fill-n-violet-9 text-n-violet-9 stroke-none;
         }
       }
 

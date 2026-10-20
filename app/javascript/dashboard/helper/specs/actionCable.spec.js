@@ -21,7 +21,7 @@ global.chatwootConfig = {
 const mockRetryJitter = value =>
   vi.spyOn(Math, 'random').mockReturnValue(value);
 
-describe('ActionCableConnector - Copilot Tests', () => {
+describe('ActionCableConnector', () => {
   let store;
   let actionCable;
   let mockDispatch;
@@ -47,17 +47,15 @@ describe('ActionCableConnector - Copilot Tests', () => {
     vi.clearAllTimers();
     vi.useRealTimers();
   });
-  describe('copilot event handlers', () => {
-    it('should register the copilot.message.created event handler', () => {
-      expect(Object.keys(actionCable.events)).toContain(
+  describe('removed Copilot events', () => {
+    it('should not register the copilot.message.created event handler', () => {
+      expect(Object.keys(actionCable.events)).not.toContain(
         'copilot.message.created'
       );
-      expect(actionCable.events['copilot.message.created']).toBe(
-        actionCable.onCopilotMessageCreated
-      );
+      expect(actionCable.events['copilot.message.created']).toBeUndefined();
     });
 
-    it('should handle the copilot.message.created event through the ActionCable system', () => {
+    it('should ignore Copilot events and keep processing account messages', () => {
       const copilotData = {
         id: 2,
         content: 'This is a copilot message from ActionCable',
@@ -69,10 +67,17 @@ describe('ActionCableConnector - Copilot Tests', () => {
         event: 'copilot.message.created',
         data: copilotData,
       });
-      expect(mockDispatch).toHaveBeenCalledWith(
-        'copilotMessages/upsert',
-        copilotData
-      );
+      expect(mockDispatch).not.toHaveBeenCalled();
+
+      const messageData = { id: 3, conversation_id: 456, account_id: 1 };
+      actionCable.onReceived({ event: 'message.updated', data: messageData });
+      expect(mockDispatch).toHaveBeenCalledWith('updateMessage', messageData);
+
+      actionCable.onReceived({
+        event: 'message.updated',
+        data: { ...messageData, account_id: 2 },
+      });
+      expect(mockDispatch).toHaveBeenCalledTimes(1);
     });
   });
 

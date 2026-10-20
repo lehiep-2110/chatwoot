@@ -107,9 +107,6 @@ const mountWith = ({
     global: {
       plugins: [store],
       mocks: { $t: key => key },
-      // The bottom panel sits inside a <Transition>, which shallowMount stubs
-      // without rendering its children.
-      stubs: { transition: false },
     },
   });
   return { wrapper, store };
@@ -193,7 +190,7 @@ describe('ReplyBox', () => {
       expect(bottomPanel(wrapper).enableWhatsAppTemplates).toBe(false);
       expect(bottomPanel(wrapper).enableContentTemplates).toBe(false);
       // The note composer stays usable — this is a restriction, not a lockout.
-      expect(topPanel(wrapper).isEditorDisabled).toBe(false);
+      expect(editor(wrapper).disabled).toBe(false);
     });
 
     it('opens directly in note mode when a bot already owns the pending conversation', () => {
@@ -210,7 +207,7 @@ describe('ReplyBox', () => {
       expect(store.getters['draftMessages/getReplyEditorMode']).toBe(
         REPLY_EDITOR_MODES.NOTE
       );
-      expect(topPanel(wrapper).isEditorDisabled).toBe(false);
+      expect(editor(wrapper).disabled).toBe(false);
     });
 
     it('opens in reply mode for every other conversation', () => {
@@ -262,7 +259,7 @@ describe('ReplyBox', () => {
       expect(bottomPanel(wrapper).enableWhatsAppTemplates).toBe(stillRepliable);
       // WhatsApp/API disable the editor and steer to templates; everywhere
       // else the composer falls back to a usable private note.
-      expect(topPanel(wrapper).isEditorDisabled).toBe(stillRepliable);
+      expect(editor(wrapper).disabled).toBe(stillRepliable);
     });
   });
 
