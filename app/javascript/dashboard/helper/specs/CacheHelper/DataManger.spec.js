@@ -87,6 +87,39 @@ describe('DataManager', () => {
   });
 
   describe('replace', () => {
+    it('serializes concurrent replacements with overlapping keys', async () => {
+      const initialData = [{ id: 1, name: 'initial-inbox' }];
+      const firstData = [{ id: 1, name: 'first-inbox' }];
+      const secondData = [{ id: 1, name: 'second-inbox' }];
+      await dataManager.push({ modelName: 'inbox', data: initialData });
+
+      await Promise.all([
+        dataManager.replace({ modelName: 'inbox', data: firstData }),
+        dataManager.replace({ modelName: 'inbox', data: secondData }),
+      ]);
+
+      expect(await dataManager.get({ modelName: 'inbox' })).toEqual(secondData);
+    });
+
+    it('preserves existing data when a replacement contains duplicate keys', async () => {
+      const initialData = [{ id: 1, name: 'initial-inbox' }];
+      await dataManager.push({ modelName: 'inbox', data: initialData });
+
+      await expect(
+        dataManager.replace({
+          modelName: 'inbox',
+          data: [
+            { id: 2, name: 'new-inbox' },
+            { id: 2, name: 'duplicate-inbox' },
+          ],
+        })
+      ).rejects.toMatchObject({ name: 'ConstraintError' });
+
+      expect(await dataManager.get({ modelName: 'inbox' })).toEqual(
+        initialData
+      );
+    });
+
     it('should replace existing data in the specified model', async () => {
       const inboxData = [
         { id: 1, name: 'inbox-1' },

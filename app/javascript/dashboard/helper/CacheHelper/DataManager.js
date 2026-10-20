@@ -57,8 +57,13 @@ export class DataManager {
   async replace({ modelName, data }) {
     this.validateModel(modelName);
 
-    await this.db.clear(modelName);
-    return this.push({ modelName, data });
+    const tx = this.db.transaction(modelName, 'readwrite');
+    const items = Array.isArray(data) ? data : [data];
+    await Promise.all([
+      tx.store.clear(),
+      ...items.map(item => tx.store.add(item)),
+      tx.done,
+    ]);
   }
 
   async push({ modelName, data }) {
