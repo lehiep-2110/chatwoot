@@ -35,7 +35,6 @@ class Integrations::Hook < ApplicationRecord
   validate :validate_settings_json_schema
   validate :ensure_feature_enabled
   validate :validate_openai_api_key, if: :validate_openai_api_key?
-  validate :validate_cloudflare_realtimekit_credentials, if: :validate_cloudflare_realtimekit_credentials?
   validates :app_id, uniqueness: { scope: [:account_id], unless: -> { app.present? && app.params[:allow_multiple_hooks].present? } }
 
   # TODO: This seems to be only used for slack at the moment
@@ -135,17 +134,8 @@ class Integrations::Hook < ApplicationRecord
     openai? && enabled? && (new_record? || openai_api_key_changed? || will_save_change_to_status?)
   end
 
-  def validate_cloudflare_realtimekit_credentials?
-    dyte? && enabled? && !legacy_dyte_settings_unchanged? &&
-      (new_record? || cloudflare_realtimekit_credentials_changed? || will_save_change_to_status?)
-  end
-
   def openai_api_key_changed?
     settings_api_key(settings) != settings_api_key(settings_in_database)
-  end
-
-  def cloudflare_realtimekit_credentials_changed?
-    settings_cloudflare_realtimekit_credentials(settings) != settings_cloudflare_realtimekit_credentials(settings_in_database)
   end
 
   def legacy_dyte_settings_unchanged?
@@ -165,23 +155,8 @@ class Integrations::Hook < ApplicationRecord
     errors.add(:base, I18n.t('errors.openai.invalid_api_key'))
   end
 
-  def validate_cloudflare_realtimekit_credentials
-    result = Integrations::Cloudflare::RealtimeKitCredentialsValidator.validate(*settings_cloudflare_realtimekit_credentials(settings))
-    return if result.success?
-
-    errors.add(:base, I18n.t("errors.cloudflare.realtimekit.#{result.error}"))
-  end
-
   def settings_api_key(value)
     settings_value(value, 'api_key')
-  end
-
-  def settings_cloudflare_realtimekit_credentials(value)
-    [
-      settings_value(value, 'account_id'),
-      settings_value(value, 'app_id'),
-      settings_value(value, 'api_token')
-    ]
   end
 
   def settings_value(value, key)

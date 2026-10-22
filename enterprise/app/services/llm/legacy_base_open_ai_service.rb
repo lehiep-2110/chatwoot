@@ -1,11 +1,7 @@
 # frozen_string_literal: true
 
 # DEPRECATED: This class uses the legacy OpenAI Ruby gem directly.
-# Only used for PDF/file operations that require OpenAI's files API:
-# - Captain::Llm::PdfProcessingService (files.upload for assistants)
-# - Captain::Llm::PaginatedFaqGeneratorService (uses file_id from uploaded files)
-#
-# For all other LLM operations, use Llm::BaseAiService with RubyLLM instead.
+# Kept for the shared voice-note/audio transcription service.
 class Llm::LegacyBaseOpenAiService
   DEFAULT_MODEL = 'gpt-4.1-mini'
 

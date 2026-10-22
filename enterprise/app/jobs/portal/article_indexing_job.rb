@@ -1,7 +1,6 @@
 class Portal::ArticleIndexingJob < ApplicationJob
   queue_as :low
 
-  def perform(article)
-    article.generate_and_save_article_seach_terms
-  end
+  # Consume jobs queued before Captain retirement without AI calls or changes to historical data.
+  def perform(article); end
 end

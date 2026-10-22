@@ -1,7 +1,6 @@
 class Campaigns::TriggerOneoffCampaignJob < ApplicationJob
   queue_as :low
 
-  def perform(campaign)
-    campaign.trigger!
-  end
+  # Retain the class and argument for jobs queued before Campaigns was retired.
+  def perform(_campaign); end
 end

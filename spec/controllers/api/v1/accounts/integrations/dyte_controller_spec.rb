@@ -1,140 +1,42 @@
 require 'rails_helper'
 
-RSpec.describe 'Dyte Integration API', type: :request do
-  let(:headers) { { 'Content-Type' => 'application/json' } }
+RSpec.describe 'Retired Calls integration settings', type: :request do
   let(:account) { create(:account) }
-  let(:inbox) { create(:inbox, account: account) }
-  let(:conversation) { create(:conversation, account: account, status: :pending) }
-  let(:message) { create(:message, conversation: conversation, account: account, inbox: conversation.inbox) }
-  let(:integration_message) do
-    create(:message, content_type: 'integrations',
-                     content_attributes: { type: 'dyte', data: { meeting_id: 'm_id' } },
-                     conversation: conversation, account: account, inbox: conversation.inbox)
-  end
-  let(:agent) { create(:user, account: account, role: :agent) }
-  let(:unauthorized_agent) { create(:user, account: account, role: :agent) }
-
-  before do
-    allow(Integrations::Cloudflare::RealtimeKitCredentialsValidator).to receive(:validate)
-      .and_return(Integrations::Cloudflare::RealtimeKitCredentialsValidator::Result.new(true, nil))
-    create(:integrations_hook, :dyte, account: account)
-    create(:inbox_member, user: agent, inbox: conversation.inbox)
+  let(:admin) { create(:user, account: account, role: :administrator) }
+  let(:headers) { admin.create_new_auth_token }
+  let!(:hook) do
+    create(:integrations_hook, app_id: 'dyte', account: account, status: :disabled,
+                               settings: { account_id: 'historical', app_id: 'historical', api_token: 'historical-token' })
   end
 
-  describe 'POST /api/v1/accounts/:account_id/integrations/dyte/create_a_meeting' do
-    context 'when it is an unauthenticated user' do
-      it 'returns unauthorized' do
-        post create_a_meeting_api_v1_account_integrations_dyte_url(account)
-        expect(response).to have_http_status(:unauthorized)
-      end
-    end
+  it 'hides the integration catalog entry and direct lookup' do
+    get "/api/v1/accounts/#{account.id}/integrations/apps", headers: headers
+    expect(response).to have_http_status(:ok)
+    expect(response.body).not_to include('"id":"dyte"')
 
-    context 'when the agent does not have access to the inbox' do
-      it 'returns unauthorized' do
-        post create_a_meeting_api_v1_account_integrations_dyte_url(account),
-             params: { conversation_id: conversation.display_id },
-             headers: unauthorized_agent.create_new_auth_token,
-             as: :json
-        expect(response).to have_http_status(:unauthorized)
-      end
-    end
-
-    context 'when it is an agent with inbox access and the Dyte API is a success' do
-      before do
-        stub_request(:post, 'https://api.cloudflare.com/client/v4/accounts/account_id/realtime/kit/app_id/meetings')
-          .to_return(
-            status: 200,
-            body: { success: true, data: { id: 'meeting_id' } }.to_json,
-            headers: headers
-          )
-      end
-
-      it 'returns valid message payload' do
-        post create_a_meeting_api_v1_account_integrations_dyte_url(account),
-             params: { conversation_id: conversation.display_id },
-             headers: agent.create_new_auth_token,
-             as: :json
-        expect(response).to have_http_status(:success)
-        response_body = response.parsed_body
-        last_message = conversation.reload.messages.last
-        expect(conversation.display_id).to eq(response_body['conversation_id'])
-        expect(last_message.id).to eq(response_body['id'])
-      end
-    end
-
-    context 'when it is an agent with inbox access and the Dyte API is errored' do
-      before do
-        stub_request(:post, 'https://api.cloudflare.com/client/v4/accounts/account_id/realtime/kit/app_id/meetings')
-          .to_return(
-            status: 422,
-            body: { success: false, data: { message: 'Title is required' } }.to_json,
-            headers: headers
-          )
-      end
-
-      it 'returns error payload' do
-        post create_a_meeting_api_v1_account_integrations_dyte_url(account),
-             params: { conversation_id: conversation.display_id },
-             headers: agent.create_new_auth_token,
-             as: :json
-        expect(response).to have_http_status(:unprocessable_entity)
-        response_body = response.parsed_body
-        expect(response_body['error']).to eq({ 'data' => { 'message' => 'Title is required' }, 'success' => false })
-      end
-    end
+    get "/api/v1/accounts/#{account.id}/integrations/apps/dyte", headers: headers
+    expect(response).to have_http_status(:not_found)
   end
 
-  describe 'POST /api/v1/accounts/:account_id/integrations/dyte/add_participant_to_meeting' do
-    context 'when it is an unauthenticated user' do
-      it 'returns unauthorized' do
-        post add_participant_to_meeting_api_v1_account_integrations_dyte_url(account)
-        expect(response).to have_http_status(:unauthorized)
-      end
-    end
+  it 'rejects creation before validating remote credentials' do
+    expect(HTTParty).not_to receive(:get)
+    expect do
+      post "/api/v1/accounts/#{account.id}/integrations/hooks",
+           headers: headers,
+           params: { hook: { app_id: 'dyte', settings: {} } }, as: :json
+    end.not_to change(Integrations::Hook, :count)
+    expect(response).to have_http_status(:gone)
+  end
 
-    context 'when the agent does not have access to the inbox' do
-      it 'returns unauthorized' do
-        post add_participant_to_meeting_api_v1_account_integrations_dyte_url(account),
-             params: { message_id: message.id },
-             headers: unauthorized_agent.create_new_auth_token,
-             as: :json
-        expect(response).to have_http_status(:unauthorized)
-      end
-    end
+  it 'rejects updates and events without altering a historical hook' do
+    attributes = hook.reload.attributes
+    patch "/api/v1/accounts/#{account.id}/integrations/hooks/#{hook.id}",
+          headers: headers,
+          params: { hook: { status: 'enabled', settings: {} } }, as: :json
+    expect(response).to have_http_status(:gone)
 
-    context 'when it is an agent with inbox access and message_type is not integrations' do
-      it 'returns error' do
-        post add_participant_to_meeting_api_v1_account_integrations_dyte_url(account),
-             params: { message_id: message.id },
-             headers: agent.create_new_auth_token,
-             as: :json
-        expect(response).to have_http_status(:unprocessable_entity)
-      end
-    end
-
-    context 'when it is an agent with inbox access and message_type is integrations' do
-      before do
-        stub_request(:post, 'https://api.cloudflare.com/client/v4/accounts/account_id/realtime/kit/app_id/meetings/m_id/participants')
-          .to_return(
-            status: 200,
-            body: { success: true, data: { id: 'random_uuid', token: 'json-web-token' } }.to_json,
-            headers: headers
-          )
-      end
-
-      it 'returns token' do
-        post add_participant_to_meeting_api_v1_account_integrations_dyte_url(account),
-             params: { message_id: integration_message.id },
-             headers: agent.create_new_auth_token,
-             as: :json
-        expect(response).to have_http_status(:success)
-        response_body = response.parsed_body
-        expect(response_body).to eq(
-          {
-            'id' => 'random_uuid', 'token' => 'json-web-token'
-          }
-        )
-      end
-    end
+    post "/api/v1/accounts/#{account.id}/integrations/hooks/#{hook.id}/process_event", headers: headers, as: :json
+    expect(response).to have_http_status(:gone)
+    expect(hook.reload.attributes).to eq(attributes)
   end
 end

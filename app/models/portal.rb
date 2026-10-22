@@ -203,5 +203,3 @@ class Portal < ApplicationRecord
     config[key] || config[key.to_sym]
   end
 end
-
-Portal.include_mod_with('Concerns::Portal')

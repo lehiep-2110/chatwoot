@@ -1,9 +1,6 @@
 class Captain::Llm::UpdateEmbeddingJob < ApplicationJob
   queue_as :low
 
-  def perform(record, content)
-    account_id = record.account_id
-    embedding = Captain::Llm::EmbeddingService.new(account_id: account_id).get_embedding(content)
-    record.update!(embedding: embedding)
-  end
+  # Consume jobs queued before Captain retirement without AI calls or changes to historical data.
+  def perform(record, content); end
 end

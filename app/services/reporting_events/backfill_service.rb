@@ -8,8 +8,7 @@ class ReportingEvents::BackfillService
   ].freeze
 
   # TODO: Move this to EventMetricRegistry when we expand distinct-counting support.
-  # The live path already guards uniqueness in ReportingEventListener#conversation_bot_handoff,
-  # but historical duplicates can exist since it's not enforced at the DB level.
+  # Historical duplicates can exist since uniqueness is not enforced at the DB level.
   # These events are queried per-dimension (not group-then-sum) because COUNT(DISTINCT) is not additive.
   DISTINCT_COUNT_EVENTS = %w[conversation_bot_handoff].freeze
 

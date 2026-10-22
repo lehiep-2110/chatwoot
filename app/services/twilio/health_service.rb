@@ -21,7 +21,7 @@ class Twilio::HealthService
       status: healthy?(account, sender, webhooks) ? 'healthy' : 'misconfigured',
       account: account,
       sender: sender,
-      voice_enabled: channel.voice_enabled?,
+      voice_enabled: false,
       webhooks: webhooks
     }
   end
@@ -46,7 +46,7 @@ class Twilio::HealthService
   end
 
   def required_capabilities
-    channel.voice_enabled? ? %w[sms voice] : %w[sms]
+    %w[sms]
   end
 
   # Restricted API keys can read numbers and applications but not the Account resource, so a refusal
@@ -102,51 +102,7 @@ class Twilio::HealthService
   def phone_number_webhooks
     # An sms_application_sid on the number makes Twilio ignore sms_url entirely.
     override = 'overridden_by_application' if number.sms_application_sid.present?
-    webhooks = [webhook('messaging', twilio_callback_index_url, number.sms_url, method: number.sms_method, override: override)]
-    webhooks += voice_webhooks if channel.voice_enabled?
-    webhooks
-  end
-
-  def voice_webhooks
-    [
-      inbound_voice_webhook,
-      webhook('voice_status', channel.voice_status_webhook_url, number.status_callback, method: number.status_callback_method),
-      # Outbound calls dial through the TwiML app, so a stale voice_url here breaks them silently.
-      twiml_app_webhook
-    ].compact
-  end
-
-  # With our own app attached, Twilio routes inbound calls through it and ignores the number's
-  # voice_url, so checking that url here would only misreport a working inbox. The TwiML app entry
-  # below is the real check in that setup.
-  def inbound_voice_webhook
-    return if number.voice_application_sid.present? && number.voice_application_sid == channel.twiml_app_sid
-
-    webhook('voice', channel.voice_call_webhook_url, number.voice_url, method: number.voice_method, override: voice_override)
-  end
-
-  # A trunk or a foreign TwiML app on the number makes Twilio ignore voice_url entirely.
-  def voice_override
-    return 'overridden_by_trunk' if number.trunk_sid.present?
-    return 'overridden_by_application' if number.voice_application_sid.present?
-
-    nil
-  end
-
-  def twiml_app_webhook
-    return missing_twiml_app_webhook if channel.twiml_app_sid.blank?
-
-    app = channel.client.applications(channel.twiml_app_sid).fetch
-    webhook('voice_app', channel.voice_call_webhook_url, app.voice_url, method: app.voice_method)
-  rescue Twilio::REST::RestError => e
-    raise unless e.status_code == 404
-
-    # The stored app was deleted in Twilio; repair recreates it.
-    missing_twiml_app_webhook
-  end
-
-  def missing_twiml_app_webhook
-    webhook('voice_app', channel.voice_call_webhook_url, nil, override: 'missing_twiml_app')
+    [webhook('messaging', twilio_callback_index_url, number.sms_url, method: number.sms_method, override: override)]
   end
 
   def webhook(name, expected, actual, method: nil, override: nil)

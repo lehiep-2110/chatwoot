@@ -20,8 +20,6 @@ RSpec.describe Twilio::MediaDownloadService do
   end
 
   before do
-    allow(Twilio::VoiceWebhookSetupService).to receive(:new)
-      .and_return(instance_double(Twilio::VoiceWebhookSetupService, perform: "AP#{SecureRandom.hex(16)}"))
     allow(Resolv).to receive(:getaddresses).and_call_original
     allow(Resolv).to receive(:getaddresses).with('api.twilio.com').and_return(['54.172.60.0'])
     allow(Resolv).to receive(:getaddresses).with('mms.twiliocdn.com').and_return(['18.65.3.1'])

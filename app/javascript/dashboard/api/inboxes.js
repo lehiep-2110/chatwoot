@@ -11,10 +11,6 @@ class Inboxes extends CacheEnabledApiClient {
     return 'inbox';
   }
 
-  getCampaigns(inboxId) {
-    return axios.get(`${this.url}/${inboxId}/campaigns`);
-  }
-
   deleteInboxAvatar(inboxId) {
     return axios.delete(`${this.url}/${inboxId}/avatar`);
   }

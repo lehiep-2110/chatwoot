@@ -1,6 +1,7 @@
 class Api::V1::Accounts::Integrations::HooksController < Api::V1::Accounts::Integrations::BaseController
   before_action :fetch_hook, except: [:create]
   before_action :check_authorization
+  before_action :reject_retired_call_integration, except: [:destroy]
   before_action :ensure_shopify_enabled, if: :shopify_hook?
 
   def create
@@ -31,6 +32,11 @@ class Api::V1::Accounts::Integrations::HooksController < Api::V1::Accounts::Inte
   end
 
   private
+
+  def reject_retired_call_integration
+    app_id = action_name == 'create' ? permitted_params[:app_id] : @hook.app_id
+    head :gone if app_id == 'dyte'
+  end
 
   def fetch_hook
     @hook = Current.account.hooks.find(params[:id])

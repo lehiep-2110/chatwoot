@@ -77,8 +77,6 @@ module Api::V1::Accounts::Concerns::InboxHealthManagement
     return Whatsapp::WebhookSetupService.new(@inbox.channel).register_callback if whatsapp_cloud_channel?
 
     Twilio::WebhookSetupService.new(channel: @inbox.channel).perform
-    # No-op unless voice is enabled; keeps the number's voice webhooks in sync alongside messaging.
-    @inbox.channel.try(:reprovision_voice_webhooks!)
   end
 
   def validate_health_supported_channel

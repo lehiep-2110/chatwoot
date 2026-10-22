@@ -1,4 +1,5 @@
 class Captain::AudienceValidator < ActiveModel::Validator
+  MAX_DEPTH = 3
   GROUP_OPERATORS = %w[and or].freeze
   VALUELESS_OPERATORS = %w[is_present is_not_present].freeze
   EQUALITY_OPERATORS = %w[equal_to not_equal_to].freeze
@@ -47,7 +48,7 @@ class Captain::AudienceValidator < ActiveModel::Validator
   private
 
   def valid_node?(node, depth, custom_attribute_types)
-    return false unless node.is_a?(Hash) && depth <= Captain::AudienceMatcher::MAX_DEPTH
+    return false unless node.is_a?(Hash) && depth <= MAX_DEPTH
 
     node = node.with_indifferent_access
     return valid_group?(node, depth, custom_attribute_types) if node.key?(:conditions)

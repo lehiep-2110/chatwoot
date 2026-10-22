@@ -544,12 +544,13 @@ describe AutomationRuleListener do
       end
 
       describe '#conversation_updated with first_reply_created event' do
-        let(:reporting_event_listener) { ReportingEventListener.instance }
+        let(:dispatcher) { AsyncDispatcher.new }
         let(:human_message) { create(:message, message_type: 'outgoing', account: account, inbox: inbox, conversation: conversation) }
-        let(:first_reply_event) { Events::Base.new('first.reply.created', Time.zone.now, message: human_message) }
+
+        before { dispatcher.load_listeners }
 
         it 'triggers automation rule only once send message to the contacts' do
-          reporting_event_listener.first_reply_created(first_reply_event)
+          dispatcher.publish_event('first.reply.created', Time.zone.now, message: human_message)
           listener.message_created(event)
           conversation.reload
 
@@ -560,8 +561,7 @@ describe AutomationRuleListener do
           expect(first_reply.count).to eq(1)
 
           automation_message = conversation.messages.last
-          first_reply_event = Events::Base.new('first.reply.created', Time.zone.now, message: automation_message)
-          reporting_event_listener.first_reply_created(first_reply_event)
+          dispatcher.publish_event('first.reply.created', Time.zone.now, message: automation_message)
 
           expect(conversation.messages.count).to eq(3)
           expect(first_reply.count).to eq(1)

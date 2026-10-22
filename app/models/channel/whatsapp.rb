@@ -86,37 +86,6 @@ class Channel::Whatsapp < ApplicationRecord
     super.except('business_management_token')
   end
 
-  # Enables voice: turns calling on at Meta (idempotent), then re-registers webhooks
-  # with the in-memory calling_enabled flag so the `calls` field is subscribed. The
-  # flag is persisted only after registration succeeds, so a webhook failure can't
-  # leave the inbox reporting voice_enabled? while the WABA isn't subscribed to calls.
-  # Saved with validate: false to skip validate_provider_config's remote credential
-  # re-check, which could spuriously fail and desync the flag from Meta.
-  def enable_voice_calling!
-    raise 'WhatsApp calling requires a whatsapp_cloud inbox' unless voice_calling_supported?
-    raise 'WhatsApp calling requires the channel_voice feature' unless account.feature_enabled?('channel_voice')
-
-    provider_service.update_calling_status('ENABLED')
-    self.provider_config = provider_config.merge('calling_enabled' => true)
-    webhook_setup_service.register_callback
-    save!(validate: false)
-  end
-
-  # Disables voice: unsets calling_enabled (gates the call subsystem) and re-registers
-  # webhooks, which drops `calls` from the subscription (best-effort, so a Meta outage
-  # can't trap admins). Leaves Meta's WABA calling.status untouched.
-  def disable_voice_calling!
-    raise 'WhatsApp calling requires a whatsapp_cloud inbox' unless voice_calling_supported?
-
-    self.provider_config = provider_config.merge('calling_enabled' => false)
-    save!(validate: false)
-    begin
-      webhook_setup_service.register_callback
-    rescue StandardError => e
-      Rails.logger.warn "[WHATSAPP CALL] disable webhook re-subscribe failed: #{e.message}"
-    end
-  end
-
   # Whether the pending (unsaved) provider_config change drops the embedded_signup
   # source marker, i.e. this save is an embedded signup → manual setup transfer.
   def embedded_to_manual_transfer_pending?

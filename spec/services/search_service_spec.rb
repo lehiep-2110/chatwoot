@@ -279,32 +279,12 @@ describe SearchService do
       end
     end
 
-    context 'when article search' do
-      it 'returns matching articles' do
-        article2 = create(:article, title: 'Spellcasting Guide',
-                                    account: account, portal: portal, author: user, status: 'published')
-        article3 = create(:article, title: 'Spellcasting Manual',
-                                    account: account, portal: portal, author: user, status: 'published')
+    context 'when article search was retired' do
+      it 'returns the empty compatibility key without querying historical articles' do
+        search = described_class.new(current_user: user, current_account: account, params: { q: 'Magic' }, search_type: 'Article')
+        expect(account.articles).not_to receive(:text_search)
 
-        params = { q: 'Spellcasting' }
-        search = described_class.new(current_user: user, current_account: account, params: params, search_type: 'Article')
-        results = search.perform[:articles]
-
-        expect(results.length).to eq(2)
-        expect(results.map(&:id)).to contain_exactly(article2.id, article3.id)
-      end
-
-      it 'returns paginated results' do
-        # Create many articles to test pagination
-        16.times do |i|
-          create(:article, title: "Magic Article #{i}", account: account, portal: portal, author: user, status: 'published')
-        end
-
-        params = { q: 'Magic', page: 1 }
-        search = described_class.new(current_user: user, current_account: account, params: params, search_type: 'Article')
-        results = search.perform[:articles]
-
-        expect(results.length).to eq(15) # Default per_page is 15
+        expect(search.perform).to eq(articles: [])
       end
     end
 
@@ -359,37 +339,6 @@ describe SearchService do
 
         # Both conversations should be included since their last_activity_at is before the capped time
         expect(results.map(&:id)).to include(recent_conversation.id)
-      end
-    end
-
-    context 'when filtering articles with time caps', :opensearch do
-      let!(:old_article) do
-        create(:article, title: 'Old Magic Guide', account: account, portal: portal, author: user, status: 'published', updated_at: 100.days.ago)
-      end
-      let!(:recent_article) do
-        create(:article, title: 'Recent Magic Guide', account: account, portal: portal, author: user, status: 'published', updated_at: 1.day.ago)
-      end
-
-      before do
-        account.enable_features!('advanced_search')
-      end
-
-      it 'caps since to 90 days ago and excludes older articles' do
-        params = { q: 'Magic', since: 100.days.ago.to_i, search_type: 'Article' }
-        search = described_class.new(current_user: user, current_account: account, params: params, search_type: 'Article')
-        results = search.perform[:articles]
-
-        expect(results.map(&:id)).not_to include(old_article.id)
-        expect(results.map(&:id)).to include(recent_article.id)
-      end
-
-      it 'caps until to 90 days from now' do
-        params = { q: 'Magic', until: 100.days.from_now.to_i, search_type: 'Article' }
-        search = described_class.new(current_user: user, current_account: account, params: params, search_type: 'Article')
-        results = search.perform[:articles]
-
-        # Both articles should be included since their updated_at is before the capped time
-        expect(results.map(&:id)).to include(recent_article.id)
       end
     end
   end

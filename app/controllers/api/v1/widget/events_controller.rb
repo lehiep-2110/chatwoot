@@ -2,6 +2,8 @@ class Api::V1::Widget::EventsController < Api::V1::Widget::BaseController
   include Events::Types
 
   def create
+    return head :gone if [CAMPAIGN_TRIGGERED, 'campaign_triggered'].include?(permitted_params[:name])
+
     Rails.configuration.dispatcher.dispatch(permitted_params[:name], Time.zone.now, contact_inbox: @contact_inbox,
                                                                                     event_info: permitted_params[:event_info].to_h.merge(event_info))
     head :no_content

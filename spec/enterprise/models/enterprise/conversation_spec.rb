@@ -15,11 +15,11 @@ RSpec.describe Conversation, type: :model do
                                                        }))
     end
 
-    it 'parks an in-audience contact conversation as pending' do
+    it 'keeps a legacy in-audience Captain connection inactive' do
       conversation = create(:conversation, account: account, inbox: inbox, contact: us_contact)
 
-      expect(conversation.status).to eq('pending')
-      expect(conversation.ai_assignee).to eq(assistant)
+      expect(conversation.status).to eq('open')
+      expect(conversation.ai_assignee).to be_nil
     end
 
     it 'routes an out-of-audience contact conversation to open' do

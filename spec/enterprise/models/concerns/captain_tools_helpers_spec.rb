@@ -42,28 +42,6 @@ RSpec.describe Concerns::CaptainToolsHelpers, type: :concern do
     end
   end
 
-  describe '.resolve_tool_class' do
-    it 'resolves valid tool classes' do
-      # Mock the constantize to return a class
-      stub_const('Captain::Tools::AddContactNoteTool', Class.new)
-
-      result = test_class.resolve_tool_class('add_contact_note')
-      expect(result).to eq(Captain::Tools::AddContactNoteTool)
-    end
-
-    it 'returns nil for invalid tool classes' do
-      result = test_class.resolve_tool_class('invalid_tool')
-      expect(result).to be_nil
-    end
-
-    it 'converts snake_case to PascalCase' do
-      stub_const('Captain::Tools::AddPrivateNoteTool', Class.new)
-
-      result = test_class.resolve_tool_class('add_private_note')
-      expect(result).to eq(Captain::Tools::AddPrivateNoteTool)
-    end
-  end
-
   describe '#extract_tool_ids_from_text' do
     it 'extracts tool IDs from text' do
       text = 'First [@Add Contact Note](tool://add_contact_note) then [@Update Priority](tool://update_priority)'
@@ -102,5 +80,14 @@ RSpec.describe Concerns::CaptainToolsHelpers, type: :concern do
       result = test_instance.extract_tool_ids_from_text(text)
       expect(result).to eq(%w[add_contact_note update_priority add_private_note])
     end
+  end
+
+  it 'preserves configured metadata without executable tools on historical models' do
+    expected_ids = YAML.load_file(Rails.root.join('config/agents/tools.yml')).pluck('id')
+
+    expect(Captain::Assistant.built_in_tool_ids).to eq(expected_ids)
+    expect(Captain::Assistant.instance_methods).not_to include(:agent)
+    expect(Captain::Scenario.instance_methods).not_to include(:agent)
+    expect(Captain::CustomTool.instance_methods).not_to include(:tool)
   end
 end

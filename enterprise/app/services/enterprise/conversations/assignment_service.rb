@@ -1,19 +1,14 @@
 module Enterprise::Conversations::AssignmentService
   def perform
-    return super unless assignee_type.to_s == 'Captain::Assistant'
-    return unless conversation.account.feature_enabled?('captain_integration')
+    # A retired Captain id must never fall through and select an HR user with the same numeric id.
+    return if assignee_type.to_s == 'Captain::Assistant'
 
-    assign_ai_assignee(captain_assistant)
+    super
   end
 
   private
 
   def open_on_assignment?
     super || conversation.ai_assignee_type == 'Captain::Assistant'
-  end
-
-  def captain_assistant
-    assistant = conversation.inbox.captain_assistant
-    assistant if assistant&.id == assignee_id.to_i
   end
 end

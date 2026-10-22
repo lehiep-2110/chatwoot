@@ -56,61 +56,9 @@ Rails.application.routes.draw do
             resource :contact_merge, only: [:create]
           end
           resource :bulk_actions, only: [:create]
-          resource :onboarding, only: [:update] do
-            get :help_center_generation
-          end
+          resource :onboarding, only: [:update]
           resources :agents, only: [:index, :create, :update, :destroy] do
             post :bulk_create, on: :collection
-          end
-          namespace :captain do
-            resource :preferences, only: [:show, :update]
-            resources :assistants do
-              member do
-                post :playground
-                get :metrics
-                get :faq_stats
-                get :summary
-                get :drilldown
-              end
-              resource :stats, only: [], controller: :assistant_stats do
-                get :overview
-                get :overview_summary
-                get :resolution_flow
-                get :resolution_trend
-              end
-              collection do
-                get :tools
-              end
-              resources :inboxes, only: [:index, :create, :destroy], param: :inbox_id
-              resources :scenarios
-            end
-            resources :agent_sessions, only: [:show]
-            resources :assistant_responses do
-              get :drilldown, on: :member
-            end
-            resources :faq_suggestions, only: [:index, :show, :update] do
-              post :approve, on: :member
-              post :dismiss, on: :member
-            end
-            resources :message_reports, only: [:create]
-            resources :bulk_actions, only: [:create]
-            resources :copilot_threads, only: [:index, :create] do
-              resources :copilot_messages, only: [:index, :create]
-            end
-            resources :custom_tools do
-              post :test, on: :collection
-            end
-            resources :documents, only: [:index, :show, :create, :destroy] do
-              post :sync, on: :member
-              get :drilldown, on: :member
-            end
-            resource :tasks, only: [], controller: 'tasks' do
-              post :rewrite
-              post :summarize
-              post :reply_suggestion
-              post :label_suggestion
-              post :follow_up
-            end
           end
           resource :saml_settings, only: [:show, :create, :update, :destroy]
           resources :agent_bots, only: [:index, :create, :show, :update, :destroy] do
@@ -148,12 +96,7 @@ Rails.application.routes.draw do
               resources :inbox_limits, only: [:create, :update, :destroy]
             end
           end
-          resources :campaigns, only: [:index, :create, :show, :update, :destroy] do
-            if ChatwootApp.enterprise?
-              get 'analytics/metrics', to: 'campaigns/analytics#metrics'
-              get 'analytics/contacts', to: 'campaigns/analytics#contacts'
-            end
-          end
+          resources :campaigns, only: [:create, :update, :destroy]
           resources :dashboard_apps, only: [:index, :show, :create, :update, :destroy]
           namespace :channels do
             resource :twilio_channel, only: [:create]
@@ -191,7 +134,6 @@ Rails.application.routes.draw do
               post :custom_attributes
               post :destroy_custom_attributes
               get :attachments
-              get :inbox_assistant
               get :reporting_events if ChatwootApp.enterprise?
             end
           end
@@ -201,7 +143,6 @@ Rails.application.routes.draw do
               get :conversations
               get :messages
               get :contacts
-              get :articles
             end
           end
 
@@ -242,7 +183,6 @@ Rails.application.routes.draw do
               resources :labels, only: [:create, :index]
               resources :notes
               get :attachments, to: 'attachments#index'
-              post :call, on: :member, to: 'calls#create' if ChatwootApp.enterprise?
             end
           end
           resources :data_imports, only: [:index, :show, :create] do
@@ -272,29 +212,12 @@ Rails.application.routes.draw do
               get :download
             end
           end
-          resources :reporting_events, only: [:index] if ChatwootApp.enterprise?
-
-          if ChatwootApp.enterprise?
-            resources :calls, only: [:index]
-            resources :whatsapp_calls, only: [:show] do
-              member do
-                post :accept
-                post :reject
-                post :terminate
-                post :upload_recording
-              end
-              collection do
-                post :initiate
-              end
-            end
-          end
 
           resources :custom_attribute_definitions, only: [:index, :show, :create, :update, :destroy]
           resources :custom_filters, only: [:index, :show, :create, :update, :destroy]
           resource :branded_email_layout, only: [:show, :update]
           resources :inboxes, only: [:index, :show, :create, :update, :destroy] do
             get :assignable_agents, on: :member
-            get :campaigns, on: :member
             get :agent_bot, on: :member
             get :message_templates, on: :member
             post :set_agent_bot, on: :member
@@ -305,19 +228,8 @@ Rails.application.routes.draw do
             post :register_webhook, on: :member
             post :reset_secret, on: :member
             post :rotate_hmac_token, on: :member
-            if ChatwootApp.enterprise?
-              resource :conference, only: %i[create destroy], controller: 'conference' do
-                get :token, on: :member
-              end
-              post :enable_whatsapp_calling, on: :member
-              post :disable_whatsapp_calling, on: :member
-              post :set_inbound_calls, on: :member
-              post :set_call_recording, on: :member
-            end
 
-            resource :csat_template, only: [:show, :create], controller: 'inbox_csat_templates' do
-              post :analyze, on: :collection
-            end
+            resource :csat_template, only: [:show, :create], controller: 'inbox_csat_templates'
           end
 
           resources :inbox_members, only: [:create, :show], param: :inbox_id do
@@ -405,12 +317,6 @@ Rails.application.routes.draw do
                 get :list_all_channels
               end
             end
-            resource :dyte, controller: 'dyte', only: [] do
-              collection do
-                post :create_a_meeting
-                post :add_participant_to_meeting
-              end
-            end
             resource :shopify, controller: 'shopify', only: [:destroy] do
               collection do
                 post :auth
@@ -433,28 +339,6 @@ Rails.application.routes.draw do
               collection do
                 delete :destroy
               end
-            end
-          end
-          resources :portals do
-            member do
-              patch :archive
-              delete :logo
-              post :send_instructions
-              get :ssl_status
-            end
-            resources :categories do
-              post :reorder, on: :collection
-            end
-            namespace :articles do
-              resource :bulk_actions, only: [] do
-                post :translate
-                patch :update_status
-                patch :update_category
-                delete :delete_articles
-              end
-            end
-            resources :articles do
-              post :reorder, on: :collection
             end
           end
 
@@ -496,7 +380,6 @@ Rails.application.routes.draw do
       namespace :widget do
         resource :direct_uploads, only: [:create]
         resource :config, only: [:create]
-        resources :campaigns, only: [:index]
         resources :events, only: [:create]
         resources :messages, only: [:index, :create, :update]
         resources :conversations, only: [:index, :create] do
@@ -517,55 +400,11 @@ Rails.application.routes.draw do
         end
         resources :inbox_members, only: [:index]
         resources :labels, only: [:create, :destroy]
-        namespace :integrations do
-          resource :dyte, controller: 'dyte', only: [] do
-            collection do
-              post :add_participant_to_meeting
-            end
-          end
-        end
       end
     end
 
     namespace :v2 do
-      resources :accounts, only: [:create] do
-        scope module: :accounts do
-          resources :summary_reports, only: [] do
-            collection do
-              get :agent
-              get :team
-              get :inbox
-              get :label
-              get :channel
-            end
-          end
-          resources :reports, only: [:index] do
-            collection do
-              get :summary
-              get :bot_summary
-              get :agents
-              get :inboxes
-              get :labels
-              get :teams
-              get :conversations
-              get :conversations_summary
-              get :conversation_traffic
-              get :drilldown
-              get :bot_metrics
-              get :inbox_label_matrix
-              get :first_response_time_distribution
-              get :outgoing_messages_count
-            end
-          end
-          resource :year_in_review, only: [:show]
-          resources :live_reports, only: [] do
-            collection do
-              get :conversation_metrics
-              get :grouped_conversation_metrics
-            end
-          end
-        end
-      end
+      resources :accounts, only: [:create]
     end
   end
 
@@ -589,7 +428,6 @@ Rails.application.routes.draw do
       end
 
       post 'webhooks/stripe', to: 'webhooks/stripe#process_payload'
-      post 'webhooks/firecrawl', to: 'webhooks/firecrawl#process_payload'
     end
   end
 
@@ -645,19 +483,6 @@ Rails.application.routes.draw do
     end
   end
 
-  get 'hc/:slug', to: 'public/api/v1/portals#show'
-  get 'hc/:slug/sitemap.xml', to: 'public/api/v1/portals#sitemap'
-  get 'hc/:slug/:locale', to: 'public/api/v1/portals#show', as: :public_portal_locale
-  get 'hc/:slug/:locale/search', to: 'public/api/v1/portals/search#index', as: :portal_search
-  get 'hc/:slug/:locale/articles', to: 'public/api/v1/portals/articles#index'
-  get 'hc/:slug/:locale/categories', to: 'public/api/v1/portals/categories#index'
-  get 'hc/:slug/:locale/categories/:category_slug', to: 'public/api/v1/portals/categories#show', as: :public_portal_category
-  get 'hc/:slug/:locale/categories/:category_slug/articles', to: 'public/api/v1/portals/articles#index'
-  get 'hc/:slug/articles/:article_slug.png', to: 'public/api/v1/portals/articles#tracking_pixel'
-  get 'hc/:slug/articles/:article_slug.md', to: 'public/api/v1/portals/articles#show_markdown', as: :public_portal_article_markdown,
-                                            defaults: { format: :md }
-  get 'hc/:slug/articles/:article_slug', to: 'public/api/v1/portals/articles#show', as: :public_portal_article
-
   # ----------------------------------------------------------------------
   # Used in mailer templates
   resource :app, only: [:index] do
@@ -696,13 +521,6 @@ Rails.application.routes.draw do
   namespace :twilio do
     resources :callback, only: [:create]
     resources :delivery_status, only: [:create]
-
-    if ChatwootApp.enterprise?
-      post 'voice/call/:phone', to: 'voice#call_twiml', as: :voice_call
-      post 'voice/status/:phone', to: 'voice#status', as: :voice_status
-      post 'voice/conference_status/:phone', to: 'voice#conference_status', as: :voice_conference_status
-      post 'voice/recording_status/:phone', to: 'voice#recording_status', as: :voice_recording_status
-    end
   end
 
   get 'microsoft/callback', to: 'microsoft/callbacks#show'
@@ -715,7 +533,6 @@ Rails.application.routes.draw do
   get '.well-known/assetlinks.json' => 'android_app#assetlinks'
   get '.well-known/apple-app-site-association' => 'apple_app#site_association'
   get '.well-known/microsoft-identity-association.json' => 'microsoft#identity_association'
-  get '.well-known/cf-custom-hostname-challenge/:id', to: 'custom_domains#verify'
 
   # ----------------------------------------------------------------------
   # Internal Monitoring Routes

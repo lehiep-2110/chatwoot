@@ -70,15 +70,6 @@ RSpec.describe Captain::Scenario, type: :model do
 
       expect("handoff_to_#{scenario.handoff_key}".length).to be <= 60
     end
-
-    it 'exposes handoff keys in assistant prompt context' do
-      scenario = create(:captain_scenario, assistant: assistant, account: account)
-
-      prompt_context = assistant.send(:prompt_context)
-      scenario_config = prompt_context[:scenarios].find { |entry| entry[:title] == scenario.title }
-
-      expect(scenario_config[:key]).to eq(scenario.handoff_key)
-    end
   end
 
   describe 'tool validation and population' do
@@ -278,85 +269,6 @@ RSpec.describe Captain::Scenario, type: :model do
 
         resolved = scenario.send(:resolved_tools)
         expect(resolved).to be_empty
-      end
-    end
-
-    describe '#resolve_tool_instance' do
-      it 'returns HttpTool instance for custom tools' do
-        create(:captain_custom_tool, account: account, slug: 'custom_fetch-order')
-        scenario = create(:captain_scenario, assistant: assistant, account: account)
-
-        tool_metadata = { id: 'custom_fetch-order', custom: true }
-        tool_instance = scenario.send(:resolve_tool_instance, tool_metadata)
-        expect(tool_instance).to be_a(Captain::Tools::HttpTool)
-      end
-
-      it 'returns nil for disabled custom tools' do
-        create(:captain_custom_tool, account: account, slug: 'custom_fetch-order', enabled: false)
-        scenario = create(:captain_scenario, assistant: assistant, account: account)
-
-        tool_metadata = { id: 'custom_fetch-order', custom: true }
-        tool_instance = scenario.send(:resolve_tool_instance, tool_metadata)
-        expect(tool_instance).to be_nil
-      end
-
-      it 'returns static tool instance for non-custom tools' do
-        scenario = create(:captain_scenario, assistant: assistant, account: account)
-        allow(described_class).to receive(:resolve_tool_class).with('add_contact_note').and_return(
-          Class.new do
-            def initialize(_assistant); end
-          end
-        )
-
-        tool_metadata = { id: 'add_contact_note' }
-        tool_instance = scenario.send(:resolve_tool_instance, tool_metadata)
-        expect(tool_instance).not_to be_nil
-        expect(tool_instance).not_to be_a(Captain::Tools::HttpTool)
-      end
-    end
-
-    describe '#agent_tools' do
-      it 'returns array of tool instances including custom tools' do
-        create(:captain_custom_tool, account: account, slug: 'custom_fetch-order')
-        scenario = create(:captain_scenario,
-                          assistant: assistant,
-                          account: account,
-                          instruction: 'Use [@Fetch Order](tool://custom_fetch-order)')
-
-        tools = scenario.send(:agent_tools)
-        expect(tools.length).to eq(1)
-        expect(tools.first).to be_a(Captain::Tools::HttpTool)
-      end
-
-      it 'excludes disabled custom tools from execution' do
-        custom_tool = create(:captain_custom_tool, account: account, slug: 'custom_fetch-order', enabled: true)
-        scenario = create(:captain_scenario,
-                          assistant: assistant,
-                          account: account,
-                          instruction: 'Use [@Fetch Order](tool://custom_fetch-order)')
-
-        custom_tool.update!(enabled: false)
-
-        tools = scenario.send(:agent_tools)
-        expect(tools).to be_empty
-      end
-
-      it 'returns mixed static and custom tool instances' do
-        create(:captain_custom_tool, account: account, slug: 'custom_fetch-order')
-        scenario = create(:captain_scenario,
-                          assistant: assistant,
-                          account: account,
-                          instruction: 'Use [@Add Note](tool://add_contact_note) and [@Fetch Order](tool://custom_fetch-order)')
-
-        allow(described_class).to receive(:resolve_tool_class).with('add_contact_note').and_return(
-          Class.new do
-            def initialize(_assistant); end
-          end
-        )
-
-        tools = scenario.send(:agent_tools)
-        expect(tools.length).to eq(2)
-        expect(tools.last).to be_a(Captain::Tools::HttpTool)
       end
     end
   end

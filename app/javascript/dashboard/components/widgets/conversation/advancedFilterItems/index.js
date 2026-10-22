@@ -63,14 +63,6 @@ const filterTypes = [
     attributeModel: 'standard',
   },
   {
-    attributeKey: 'campaign_id',
-    attributeI18nKey: 'CAMPAIGN_NAME',
-    inputType: 'search_select',
-    dataType: 'Number',
-    filterOperators: OPERATOR_TYPES_2,
-    attributeModel: 'standard',
-  },
-  {
     attributeKey: 'labels',
     attributeI18nKey: 'LABELS',
     inputType: 'multi_select',
@@ -148,10 +140,6 @@ export const filterAttributeGroups = [
       {
         key: 'display_id',
         i18nKey: 'CONVERSATION_IDENTIFIER',
-      },
-      {
-        key: 'campaign_id',
-        i18nKey: 'CAMPAIGN_NAME',
       },
       {
         key: 'labels',

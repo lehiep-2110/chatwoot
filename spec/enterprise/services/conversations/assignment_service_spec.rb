@@ -43,4 +43,18 @@ RSpec.describe Conversations::AssignmentService do
       expect(conversation.reload).to have_attributes(assignee: original_assignee, status: 'resolved')
     end
   end
+
+  context 'when a retired Captain assignment uses an existing HR user id' do
+    let(:permissions) { ['conversation_manage'] }
+
+    it 'does not assign the HR user or change the conversation' do
+      account.enable_features!('captain_integration')
+      attributes = conversation.reload.attributes
+      retired = described_class.new(conversation: conversation, assignee_id: agent.id,
+                                    assignee_type: 'Captain::Assistant', validate_assignee_access: true)
+
+      expect(retired.perform).to be_nil
+      expect(conversation.reload.attributes).to eq(attributes)
+    end
+  end
 end

@@ -61,7 +61,6 @@ export function useConversationFilterContext() {
   const agents = useMapGetter('agents/getAgents');
   const inboxes = useMapGetter('inboxes/getInboxes');
   const teams = useMapGetter('teams/getTeams');
-  const campaigns = useMapGetter('campaigns/getAllCampaigns');
 
   const {
     equalityOperators,
@@ -215,20 +214,6 @@ export function useConversationFilterContext() {
       inputType: 'number',
       dataType: 'number',
       filterOperators: containmentOperators.value,
-      attributeModel: 'standard',
-    },
-    {
-      attributeKey: CONVERSATION_ATTRIBUTES.CAMPAIGN_ID,
-      value: CONVERSATION_ATTRIBUTES.CAMPAIGN_ID,
-      attributeName: t('FILTER.ATTRIBUTES.CAMPAIGN_NAME'),
-      label: t('FILTER.ATTRIBUTES.CAMPAIGN_NAME'),
-      inputType: 'searchSelect',
-      options: campaigns.value.map(campaign => ({
-        id: campaign.id,
-        name: campaign.title,
-      })),
-      dataType: 'number',
-      filterOperators: presenceOperators.value,
       attributeModel: 'standard',
     },
     {

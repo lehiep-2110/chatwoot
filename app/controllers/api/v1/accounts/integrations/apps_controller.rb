@@ -15,6 +15,8 @@ class Api::V1::Accounts::Integrations::AppsController < Api::V1::Accounts::BaseC
 
   def fetch_app
     @app = Integrations::App.find(id: params[:id])
+    raise ActiveRecord::RecordNotFound if @app&.id == 'dyte'
+
     return unless @app&.id == 'shopify'
 
     # Keep direct Shopify lookups subject to the same availability checks as the integrations list.

@@ -38,8 +38,6 @@ class Call < ApplicationRecord
   # Frontend voice bubbles/stores expect inbound/outbound string values
   DISPLAY_DIRECTION = { 'incoming' => 'inbound', 'outgoing' => 'outbound' }.freeze
 
-  DEFAULT_STUN_URL = 'stun:stun.l.google.com:19302'.freeze
-
   enum :provider, { twilio: 0, whatsapp: 1 }
   enum :direction, { incoming: 0, outgoing: 1 }
 
@@ -73,16 +71,6 @@ class Call < ApplicationRecord
     recording_enabled != false
   end
 
-  def default_conference_sid
-    "conf_account_#{account_id}_call_#{id}"
-  end
-
-  # Browser ↔ Meta WebRTC needs at least one STUN server to discover its public srflx candidate.
-  def self.default_ice_servers
-    urls = ENV.fetch('VOICE_CALL_STUN_URLS', DEFAULT_STUN_URL).split(',').filter_map { |u| u.strip.presence }
-    [{ urls: urls }]
-  end
-
   def direction_label
     DISPLAY_DIRECTION[direction]
   end
@@ -112,17 +100,6 @@ class Call < ApplicationRecord
 
   def display_status
     status.to_s.tr('_', '-')
-  end
-
-  # Payload shape matches Whatsapp::CallService#broadcast so the frontend's
-  # onVoiceCallAccepted/onVoiceCallEnded handlers can treat both providers uniformly.
-  def broadcast_voice_call_event(event, **extra)
-    payload = {
-      event: "voice_call.#{event}",
-      data: { id: id, call_id: provider_call_id, provider: provider,
-              conversation_id: conversation_id, account_id: account_id }.merge(extra)
-    }
-    ActionCable.server.broadcast("account_#{account_id}", payload)
   end
 
   def from_number

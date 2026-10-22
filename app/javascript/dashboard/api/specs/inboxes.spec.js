@@ -9,7 +9,6 @@ describe('#InboxesAPI', () => {
     expect(inboxesAPI).toHaveProperty('create');
     expect(inboxesAPI).toHaveProperty('update');
     expect(inboxesAPI).toHaveProperty('delete');
-    expect(inboxesAPI).toHaveProperty('getCampaigns');
     expect(inboxesAPI).toHaveProperty('getAgentBot');
     expect(inboxesAPI).toHaveProperty('setAgentBot');
     expect(inboxesAPI).toHaveProperty('syncTemplates');
@@ -32,11 +31,6 @@ describe('#InboxesAPI', () => {
 
     afterEach(() => {
       window.axios = originalAxios;
-    });
-
-    it('#getCampaigns', () => {
-      inboxesAPI.getCampaigns(2);
-      expect(axiosMock.get).toHaveBeenCalledWith('/api/v1/inboxes/2/campaigns');
     });
 
     it('#deleteInboxAvatar', () => {

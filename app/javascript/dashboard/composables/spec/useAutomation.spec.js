@@ -12,7 +12,6 @@ import {
   statusFilterOptions,
   messageTypeOptions,
   priorityOptions,
-  campaigns,
   contacts,
   inboxes,
   languages,
@@ -40,7 +39,6 @@ describe('useAutomation', () => {
     useMapGetter.mockImplementation(getter => {
       const getterMap = {
         'agents/getVerifiedAgents': agents,
-        'campaigns/getAllCampaigns': campaigns,
         'contacts/getContacts': contacts,
         'inboxes/getInboxes': inboxes,
         'labels/getLabels': labels,
@@ -66,8 +64,6 @@ describe('useAutomation', () => {
           return contacts;
         case 'inbox_id':
           return inboxes;
-        case 'campaigns':
-          return campaigns;
         case 'browser_language':
           return languages;
         case 'country_code':
@@ -112,7 +108,6 @@ describe('useAutomation', () => {
   it('initializes computed properties correctly', () => {
     const {
       agents: computedAgents,
-      campaigns: computedCampaigns,
       contacts: computedContacts,
       inboxes: computedInboxes,
       labels: computedLabels,
@@ -122,7 +117,6 @@ describe('useAutomation', () => {
     } = useAutomation();
 
     expect(computedAgents.value).toEqual(agents);
-    expect(computedCampaigns.value).toEqual(campaigns);
     expect(computedContacts.value).toEqual(contacts);
     expect(computedInboxes.value).toEqual(inboxes);
     expect(computedLabels.value).toEqual(labels);
@@ -229,7 +223,6 @@ describe('useAutomation', () => {
     expect(getConditionDropdownValues('assignee_id')).toEqual(agents);
     expect(getConditionDropdownValues('contact')).toEqual(contacts);
     expect(getConditionDropdownValues('inbox_id')).toEqual(inboxes);
-    expect(getConditionDropdownValues('campaigns')).toEqual(campaigns);
     expect(getConditionDropdownValues('browser_language')).toEqual(languages);
     expect(getConditionDropdownValues('country_code')).toEqual(countries);
     expect(getConditionDropdownValues('message_type')).toEqual(

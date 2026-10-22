@@ -14,8 +14,9 @@ RSpec.describe 'Captain assistant conversation assignment API', type: :request d
     create(:captain_inbox, captain_assistant: assistant, inbox: inbox)
   end
 
-  it 'assigns the connected Captain assistant and marks the conversation pending' do
+  it 'keeps HR ownership when a retired Captain assignment is requested' do
     conversation.update!(assignee: agent, status: :open)
+    attributes = conversation.reload.attributes
 
     post api_v1_account_conversation_assignments_url(account_id: account.id, conversation_id: conversation.display_id),
          params: { assignee_id: assistant.id, assignee_type: 'Captain::Assistant' },
@@ -23,18 +24,18 @@ RSpec.describe 'Captain assistant conversation assignment API', type: :request d
          as: :json
 
     expect(response).to have_http_status(:success)
-    expect(response.parsed_body).to include('id' => assistant.id, 'name' => assistant.name)
-    expect(conversation.reload).to have_attributes(
-      ai_assignee: assistant,
-      ai_assignee_type: 'Captain::Assistant',
-      assignee: nil,
-      status: 'pending'
-    )
+    expect(response.parsed_body).to be_nil
+    expect(conversation.reload.attributes).to eq(attributes)
+  end
+
+  it 'still renders the owner stored on a historical Captain conversation' do
+    conversation.update!(ai_assignee: assistant, assignee: nil, status: :pending)
 
     get "/api/v1/accounts/#{account.id}/conversations/#{conversation.display_id}",
         headers: agent.create_new_auth_token,
         as: :json
 
+    expect(response).to have_http_status(:success)
     expect(response.parsed_body.dig('meta', 'assignee')).to include('id' => assistant.id, 'name' => assistant.name)
     expect(response.parsed_body.dig('meta', 'assignee_type')).to eq('Captain::Assistant')
   end

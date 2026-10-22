@@ -30,7 +30,6 @@ class Captain::FaqSuggestion < ApplicationRecord
   validates :question, :answer, :language, presence: true
 
   before_validation :ensure_account
-  after_commit :update_embedding, on: [:create, :update]
 
   scope :ordered, -> { order(source_count: :desc, updated_at: :desc) }
   scope :by_language, ->(language) { where(language: language) }
@@ -39,13 +38,5 @@ class Captain::FaqSuggestion < ApplicationRecord
 
   def ensure_account
     self.account = assistant&.account
-  end
-
-  def update_embedding
-    return unless open?
-    return unless saved_change_to_question? || saved_change_to_answer? || embedding.nil?
-    return if previously_new_record? && embedding.present?
-
-    Captain::Llm::UpdateEmbeddingJob.perform_later(self, "#{question}: #{answer}")
   end
 end

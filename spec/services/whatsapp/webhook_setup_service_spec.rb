@@ -455,4 +455,9 @@ describe Whatsapp::WebhookSetupService do
       end
     end
   end
+
+  it 'subscribes to messaging only even when legacy calling settings remain' do
+    channel.provider_config['calling_enabled'] = true
+    expect(service.send(:subscribed_fields)).to eq(%w[messages smb_message_echoes])
+  end
 end

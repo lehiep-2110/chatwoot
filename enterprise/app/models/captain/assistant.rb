@@ -28,7 +28,6 @@ class Captain::Assistant < ApplicationRecord
 
   include Avatarable
   include Concerns::CaptainToolsHelpers
-  include Concerns::Agentable
 
   self.table_name = 'captain_assistants'
 
@@ -77,26 +76,6 @@ class Captain::Assistant < ApplicationRecord
 
   def available_name
     name
-  end
-
-  def engages?(contact, conversation)
-    responds_to_audience?(contact, conversation) && available_now?(conversation)
-  end
-
-  def responds_to_audience?(contact, conversation)
-    return true if config['audience'].blank?
-
-    Captain::AudienceMatcher.new(config['audience']).matches?(contact, conversation)
-  end
-
-  def available_now?(conversation)
-    response_window = config['response_window']
-    return true if response_window.blank? || response_window == 'always'
-
-    inbox = conversation.inbox
-    return true unless inbox.working_hours_enabled?
-
-    response_window == 'business_hours' ? !inbox.out_of_office? : inbox.out_of_office?
   end
 
   def auto_resolve_mode
@@ -201,36 +180,6 @@ class Captain::Assistant < ApplicationRecord
     return if config.key?('auto_resolve_mode')
 
     self.auto_resolve_mode = account&.captain_auto_resolve_mode || 'evaluated'
-  end
-
-  def agent_name
-    name.parameterize(separator: '_')
-  end
-
-  def agent_tools
-    [
-      self.class.resolve_tool_class('faq_lookup').new(self),
-      self.class.resolve_tool_class('handoff').new(self),
-      *account.captain_custom_tools.enabled.map { |custom_tool| custom_tool.tool(self) }
-    ]
-  end
-
-  def prompt_context
-    {
-      name: name,
-      description: description,
-      product_name: config['product_name'] || 'this product',
-      citation_enabled: citations_enabled?,
-      scenarios: scenarios.enabled.map do |scenario|
-        {
-          title: scenario.title,
-          key: scenario.handoff_key,
-          description: scenario.description
-        }
-      end,
-      response_guidelines: response_guidelines || [],
-      guardrails: guardrails || []
-    }
   end
 
   def default_avatar_url

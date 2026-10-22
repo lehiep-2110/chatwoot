@@ -26,10 +26,10 @@ RSpec.describe CopilotMessage, type: :model do
     end
 
     describe '#broadcast_message' do
-      it 'dispatches COPILOT_MESSAGE_CREATED event after create' do
+      it 'does not dispatch the retired Copilot event after create' do
         message = build(:captain_copilot_message, copilot_thread: copilot_thread)
 
-        expect(Rails.configuration.dispatcher).to receive(:dispatch)
+        expect(Rails.configuration.dispatcher).not_to receive(:dispatch)
           .with('copilot.message.created', anything, copilot_message: message)
 
         message.save!

@@ -101,7 +101,6 @@ const folders = useMapGetter('customViews/getConversationCustomViews');
 const agentList = useMapGetter('agents/getAgents');
 const teamsList = useMapGetter('teams/getTeams');
 const inboxesList = useMapGetter('inboxes/getInboxes');
-const campaigns = useMapGetter('campaigns/getAllCampaigns');
 const labels = useMapGetter('labels/getLabels');
 const currentAccountId = useMapGetter('getCurrentAccountId');
 // We can't useFunctionGetter here since it needs to be called on setup?
@@ -461,7 +460,7 @@ function onCloseDeleteFoldersModal() {
 function setParamsForEditFolderModal() {
   // Here we are setting the params for edit folder modal to show the existing values.
 
-  // For agent, team, inboxes,and campaigns we get only the id's from the query.
+  // For agents, teams and inboxes we get only the ids from the query.
   // So we are mapping the id's to the actual values.
 
   // For labels we get the name of the label from the query.
@@ -474,7 +473,6 @@ function setParamsForEditFolderModal() {
     teams: teamsList.value,
     inboxes: inboxesList.value,
     labels: labels.value,
-    campaigns: campaigns.value,
     contacts: [getContact.value(folderContactId.value)],
     languages: languages,
     countries: countries,
@@ -806,9 +804,6 @@ onMounted(() => {
   store.dispatch('setChatStatusFilter', activeStatus.value);
   store.dispatch('setChatSortFilter', activeSortBy.value);
   resetAndFetchData();
-  if (hasActiveFolders.value) {
-    store.dispatch('campaigns/get');
-  }
 });
 
 const deleteConversationDialogRef = ref(null);

@@ -24,7 +24,6 @@ class Captain::Scenario < ApplicationRecord
   DESCRIPTION_LENGTH_LIMIT = 500
 
   include Concerns::CaptainToolsHelpers
-  include Concerns::Agentable
 
   # OpenAI enforces a 64-char limit on function names. The ai-agents gem
   # prepends "handoff_to_" (11 chars), so we keep a safety margin and cap
@@ -61,23 +60,7 @@ class Captain::Scenario < ApplicationRecord
     [handoff_id_key, compact_handoff_slug, HANDOFF_KEY_SUFFIX].compact.join('_')
   end
 
-  def prompt_context
-    {
-      title: title,
-      instructions: resolved_instructions,
-      tools: resolved_tools,
-      assistant_name: assistant.name.downcase.gsub(/\s+/, '_'),
-      citation_enabled: assistant.citations_enabled?,
-      response_guidelines: response_guidelines || [],
-      guardrails: guardrails || []
-    }
-  end
-
   private
-
-  def agent_name
-    handoff_key
-  end
 
   def handoff_id_key
     return "#{HANDOFF_KEY_PREFIX}_#{id}" if id.present?
@@ -100,10 +83,6 @@ class Captain::Scenario < ApplicationRecord
     MAX_AGENT_NAME_LENGTH - handoff_id_key.length - HANDOFF_KEY_SUFFIX.length - 2
   end
 
-  def agent_tools
-    resolved_tools.map { |tool| resolve_tool_instance(tool) }
-  end
-
   def resolved_instructions
     instruction.gsub(TOOL_REFERENCE_REGEX, '`\1` tool')
   end
@@ -114,18 +93,6 @@ class Captain::Scenario < ApplicationRecord
     available_tools = assistant.available_agent_tools
     tools.filter_map do |tool_id|
       available_tools.find { |tool| tool[:id] == tool_id }
-    end
-  end
-
-  def resolve_tool_instance(tool_metadata)
-    tool_id = tool_metadata[:id]
-
-    if tool_metadata[:custom]
-      custom_tool = Captain::CustomTool.find_by(slug: tool_id, account_id: account_id, enabled: true)
-      custom_tool&.tool(assistant)
-    else
-      tool_class = self.class.resolve_tool_class(tool_id)
-      tool_class&.new(assistant)
     end
   end
 

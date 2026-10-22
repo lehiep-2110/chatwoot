@@ -2,75 +2,7 @@ require 'rails_helper'
 
 RSpec.describe 'Campaigns API', type: :request do
   let(:account) { create(:account) }
-
-  describe 'GET /api/v1/accounts/{account.id}/campaigns' do
-    context 'when it is an unauthenticated user' do
-      it 'returns unauthorized' do
-        get "/api/v1/accounts/#{account.id}/campaigns"
-
-        expect(response).to have_http_status(:unauthorized)
-      end
-    end
-
-    context 'when it is an authenticated user' do
-      let(:agent) { create(:user, account: account, role: :agent) }
-      let(:administrator) { create(:user, account: account, role: :administrator) }
-      let(:inbox) { create(:inbox, account: account) }
-      let!(:campaign) { create(:campaign, account: account, inbox: inbox, trigger_rules: { url: 'https://test.com' }) }
-
-      it 'returns unauthorized for agents' do
-        get "/api/v1/accounts/#{account.id}/campaigns",
-            headers: agent.create_new_auth_token,
-            as: :json
-
-        expect(response).to have_http_status(:unauthorized)
-      end
-
-      it 'returns all campaigns to administrators' do
-        get "/api/v1/accounts/#{account.id}/campaigns",
-            headers: administrator.create_new_auth_token,
-            as: :json
-
-        expect(response).to have_http_status(:success)
-        body = JSON.parse(response.body, symbolize_names: true)
-        expect(body.first[:id]).to eq(campaign.display_id)
-      end
-    end
-  end
-
-  describe 'GET /api/v1/accounts/{account.id}/campaigns/:id' do
-    let(:campaign) { create(:campaign, account: account, trigger_rules: { url: 'https://test.com' }) }
-
-    context 'when it is an unauthenticated user' do
-      it 'returns unauthorized' do
-        get "/api/v1/accounts/#{account.id}/campaigns/#{campaign.display_id}"
-
-        expect(response).to have_http_status(:unauthorized)
-      end
-    end
-
-    context 'when it is an authenticated user' do
-      let(:agent) { create(:user, account: account, role: :agent) }
-      let(:administrator) { create(:user, account: account, role: :administrator) }
-
-      it 'returns unauthorized for agents' do
-        get "/api/v1/accounts/#{account.id}/campaigns/#{campaign.display_id}",
-            headers: agent.create_new_auth_token,
-            as: :json
-
-        expect(response).to have_http_status(:unauthorized)
-      end
-
-      it 'shows the campaign for administrators' do
-        get "/api/v1/accounts/#{account.id}/campaigns/#{campaign.display_id}",
-            headers: administrator.create_new_auth_token,
-            as: :json
-
-        expect(response).to have_http_status(:success)
-        expect(JSON.parse(response.body, symbolize_names: true)[:id]).to eq(campaign.display_id)
-      end
-    end
-  end
+  let(:outsider) { create(:user, account: create(:account), role: :administrator) }
 
   describe 'POST /api/v1/accounts/{account.id}/campaigns' do
     let(:inbox) { create(:inbox, account: account) }
@@ -98,57 +30,68 @@ RSpec.describe 'Campaigns API', type: :request do
         expect(response).to have_http_status(:unauthorized)
       end
 
-      it 'creates a new campaign' do
-        post "/api/v1/accounts/#{account.id}/campaigns",
-             params: { inbox_id: inbox.id, title: 'test', message: 'test message' },
-             headers: administrator.create_new_auth_token,
-             as: :json
+      it 'rejects creation without adding campaigns, conversations, messages or jobs' do
+        headers = administrator.create_new_auth_token
+        params = { inbox_id: inbox.id, title: 'test', message: 'test message' }
 
-        expect(response).to have_http_status(:success)
-        expect(JSON.parse(response.body, symbolize_names: true)[:title]).to eq('test')
+        expect do
+          post "/api/v1/accounts/#{account.id}/campaigns", params: params, headers: headers, as: :json
+        end.not_to(change { [Campaign.count, Conversation.count, Message.count, enqueued_jobs.size] })
+
+        expect(response).to have_http_status(:gone)
       end
 
-      it 'creates a new ongoing campaign' do
-        post "/api/v1/accounts/#{account.id}/campaigns",
-             params: { inbox_id: inbox.id, title: 'test', message: 'test message', trigger_rules: { url: 'https://test.com' } },
-             headers: administrator.create_new_auth_token,
-             as: :json
+      it 'rejects creation of an ongoing campaign' do
+        headers = administrator.create_new_auth_token
+        params = { inbox_id: inbox.id, title: 'test', message: 'test message', trigger_rules: { url: 'https://test.com' } }
 
-        expect(response).to have_http_status(:success)
-        expect(JSON.parse(response.body, symbolize_names: true)[:title]).to eq('test')
+        expect do
+          post "/api/v1/accounts/#{account.id}/campaigns", params: params, headers: headers, as: :json
+        end.not_to change(Campaign, :count)
+
+        expect(response).to have_http_status(:gone)
       end
 
-      it 'throws error when invalid url provided for ongoing campaign' do
+      it 'returns gone before campaign parameter validation' do
         post "/api/v1/accounts/#{account.id}/campaigns",
              params: { inbox_id: inbox.id, title: 'test', message: 'test message', trigger_rules: { url: 'javascript' } },
              headers: administrator.create_new_auth_token,
              as: :json
 
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:gone)
       end
 
-      it 'creates a new oneoff campaign' do
+      it 'rejects creation of a scheduled one-off campaign' do
         twilio_sms = create(:channel_twilio_sms, account: account)
         twilio_inbox = create(:inbox, channel: twilio_sms, account: account)
         label1 = create(:label, account: account)
         label2 = create(:label, account: account)
-        scheduled_at = 2.days.from_now
+        headers = administrator.create_new_auth_token
+        params = { inbox_id: twilio_inbox.id, title: 'test', message: 'test message', scheduled_at: 2.days.from_now,
+                   audience: [{ type: 'Label', id: label1.id }, { type: 'Label', id: label2.id }] }
 
-        post "/api/v1/accounts/#{account.id}/campaigns",
-             params: {
-               inbox_id: twilio_inbox.id, title: 'test', message: 'test message',
-               scheduled_at: scheduled_at,
-               audience: [{ type: 'Label', id: label1.id }, { type: 'Label', id: label2.id }]
-             },
-             headers: administrator.create_new_auth_token,
-             as: :json
+        expect do
+          post "/api/v1/accounts/#{account.id}/campaigns", params: params, headers: headers, as: :json
+        end.not_to(change { [Campaign.count, enqueued_jobs.size] })
 
-        expect(response).to have_http_status(:success)
-        response_data = JSON.parse(response.body, symbolize_names: true)
-        expect(response_data[:campaign_type]).to eq('one_off')
-        expect(response_data[:scheduled_at].present?).to be true
-        expect(response_data[:scheduled_at]).to eq(scheduled_at.to_i)
-        expect(response_data[:audience].pluck(:id)).to include(label1.id, label2.id)
+        expect(response).to have_http_status(:gone)
+      end
+
+      it 'returns gone when campaign parameters are omitted' do
+        post "/api/v1/accounts/#{account.id}/campaigns", headers: administrator.create_new_auth_token, as: :json
+
+        expect(response).to have_http_status(:gone)
+      end
+
+      it 'rejects an administrator from another account' do
+        headers = outsider.create_new_auth_token
+        params = { inbox_id: inbox.id, title: 'test', message: 'test message' }
+
+        expect do
+          post "/api/v1/accounts/#{account.id}/campaigns", params: params, headers: headers, as: :json
+        end.not_to change(Campaign, :count)
+
+        expect(response).to have_http_status(:unauthorized)
       end
     end
   end
@@ -180,14 +123,27 @@ RSpec.describe 'Campaigns API', type: :request do
         expect(response).to have_http_status(:unauthorized)
       end
 
-      it 'updates the campaign' do
-        patch "/api/v1/accounts/#{account.id}/campaigns/#{campaign.display_id}",
-              params: { inbox_id: inbox.id, title: 'test', message: 'test message' },
-              headers: administrator.create_new_auth_token,
-              as: :json
+      %i[patch put].each do |method|
+        it "rejects #{method} without changing the campaign or enqueuing jobs" do
+          headers = administrator.create_new_auth_token
+          params = { title: 'changed title', message: 'changed message', enabled: false }
 
-        expect(response).to have_http_status(:success)
-        expect(JSON.parse(response.body, symbolize_names: true)[:title]).to eq('test')
+          expect do
+            public_send(method, "/api/v1/accounts/#{account.id}/campaigns/#{campaign.display_id}", params: params, headers: headers, as: :json)
+          end.not_to(change { [campaign.reload.attributes, enqueued_jobs.size] })
+
+          expect(response).to have_http_status(:gone)
+        end
+      end
+
+      it 'rejects an administrator from another account without changing the campaign' do
+        headers = outsider.create_new_auth_token
+
+        expect do
+          patch "/api/v1/accounts/#{account.id}/campaigns/#{campaign.display_id}", params: { title: 'changed title' }, headers: headers, as: :json
+        end.not_to(change { campaign.reload.attributes })
+
+        expect(response).to have_http_status(:unauthorized)
       end
     end
   end
@@ -217,13 +173,25 @@ RSpec.describe 'Campaigns API', type: :request do
         expect(response).to have_http_status(:unauthorized)
       end
 
-      it 'delete campaign if admin' do
-        delete "/api/v1/accounts/#{account.id}/campaigns/#{campaign.display_id}",
-               headers: administrator.create_new_auth_token,
-               as: :json
+      it 'rejects deletion without changing the campaign or its historical conversation' do
+        conversation = create(:conversation, account: account, inbox: campaign.inbox, campaign: campaign)
+        headers = administrator.create_new_auth_token
 
-        expect(response).to have_http_status(:success)
-        expect(Campaign.exists?(campaign.display_id)).to be false
+        expect do
+          delete "/api/v1/accounts/#{account.id}/campaigns/#{campaign.display_id}", headers: headers, as: :json
+        end.not_to(change { [Campaign.count, campaign.reload.attributes, conversation.reload.campaign_id, enqueued_jobs.size] })
+
+        expect(response).to have_http_status(:gone)
+      end
+
+      it 'rejects an administrator from another account without deleting the campaign' do
+        headers = outsider.create_new_auth_token
+
+        expect do
+          delete "/api/v1/accounts/#{account.id}/campaigns/#{campaign.display_id}", headers: headers, as: :json
+        end.not_to change(Campaign, :count)
+
+        expect(response).to have_http_status(:unauthorized)
       end
     end
   end

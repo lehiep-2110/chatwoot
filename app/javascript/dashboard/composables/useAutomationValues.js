@@ -21,7 +21,6 @@ export default function useAutomationValues() {
   const getters = useStoreGetters();
   const { t } = useI18n();
   const agents = useMapGetter('agents/getVerifiedAgents');
-  const campaigns = useMapGetter('campaigns/getAllCampaigns');
   const contacts = useMapGetter('contacts/getContacts');
   const inboxes = useMapGetter('inboxes/getInboxes');
   const labels = useMapGetter('labels/getLabels');
@@ -97,7 +96,6 @@ export default function useAutomationValues() {
     return getConditionOptions({
       agents: agents.value,
       booleanFilterOptions: booleanFilterOptions.value,
-      campaigns: campaigns.value,
       contacts: contacts.value,
       customAttributes: getters['attributes/getAttributes'].value,
       inboxes: inboxes.value,
@@ -150,7 +148,6 @@ export default function useAutomationValues() {
     getConditionDropdownValues,
     getActionDropdownValues,
     agents,
-    campaigns,
     contacts,
     inboxes,
     labels,

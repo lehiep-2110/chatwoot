@@ -58,10 +58,8 @@ class Captain::Document < ApplicationRecord
   enum :sync_status, { syncing: 0, synced: 1, failed: 2 }, prefix: :sync
 
   before_create :ensure_within_plan_limit
-  after_create_commit :enqueue_crawl_job
   after_create_commit :update_document_usage
   after_destroy :update_document_usage
-  after_commit :enqueue_response_builder_job
   scope :ordered, -> { order(created_at: :desc) }
 
   scope :for_account, ->(account_id) { where(account_id: account_id) }
@@ -157,27 +155,6 @@ class Captain::Document < ApplicationRecord
 
     blocked_ranges = ip.ipv4? ? SsrfFilter::IPV4_BLACKLIST : SsrfFilter::IPV6_BLACKLIST
     blocked_ranges.none? { |range| range.include?(ip) }
-  end
-
-  def enqueue_crawl_job
-    return if status != 'in_progress'
-
-    Captain::Documents::CrawlJob.perform_later(self)
-  end
-
-  def enqueue_response_builder_job
-    return unless should_enqueue_response_builder?
-
-    Captain::Documents::ResponseBuilderJob.perform_later(self)
-  end
-
-  def should_enqueue_response_builder?
-    return false if destroyed?
-    return false unless available?
-
-    return saved_change_to_status? if pdf_document?
-
-    (saved_change_to_status? || saved_change_to_content?) && content.present?
   end
 
   def update_document_usage

@@ -29,10 +29,45 @@ RSpec.describe '/api/v1/widget/events', type: :request do
              headers: { 'X-Auth-Token' => token },
              as: :json
 
-        expect(response).to have_http_status(:success)
+        expect(response).to have_http_status(:no_content)
         expect(Rails.configuration.dispatcher).to have_received(:dispatch)
           .with(params[:name], anything, contact_inbox: contact_inbox,
                                          event_info: { test_id: 'test', browser_language: nil, widget_language: nil, browser: anything })
+      end
+
+      it 'continues delivering webwidget events to external bots and webhooks' do
+        allow(Rails.configuration.dispatcher).to receive(:dispatch).and_call_original
+        headers = { 'X-Auth-Token' => token }
+        expect(AgentBotListener.instance).to receive(:webwidget_triggered).with(an_instance_of(Events::Base)).once
+        expect(WebhookListener.instance).to receive(:webwidget_triggered).with(an_instance_of(Events::Base)).once
+
+        perform_enqueued_jobs(only: EventDispatcherJob) do
+          post '/api/v1/widget/events', params: params, headers: headers, as: :json
+        end
+
+        expect(response).to have_http_status(:no_content)
+      end
+
+      context 'with a retired campaign event' do
+        let!(:campaign) { create(:campaign, account: account, inbox: web_widget.inbox) }
+
+        before do
+          allow(Rails.configuration.dispatcher).to receive(:dispatch).and_call_original
+        end
+
+        %w[campaign.triggered campaign_triggered].each do |event_name|
+          it "rejects #{event_name} without creating conversations, messages or jobs" do
+            headers = { 'X-Auth-Token' => token }
+            campaign_params = params.merge(name: event_name, event_info: { campaign_id: campaign.reload.display_id })
+            expect(Rails.configuration.dispatcher).not_to receive(:dispatch)
+
+            expect do
+              post '/api/v1/widget/events', params: campaign_params, headers: headers, as: :json
+            end.not_to(change { [Conversation.count, Message.count, enqueued_jobs.size] })
+
+            expect(response).to have_http_status(:gone)
+          end
+        end
       end
     end
   end

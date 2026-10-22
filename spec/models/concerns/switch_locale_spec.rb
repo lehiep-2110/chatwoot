@@ -52,9 +52,9 @@ RSpec.describe 'SwitchLocale Concern', type: :controller do
     context 'when request is from custom domain' do
       before { request.host = portal.custom_domain }
 
-      it 'sets locale from portal' do
+      it 'does not use a retired portal locale' do
         get :index
-        expect(response.body).to eq('fr')
+        expect(response.body).to eq('en')
       end
 
       it 'overrides portal locale with param' do

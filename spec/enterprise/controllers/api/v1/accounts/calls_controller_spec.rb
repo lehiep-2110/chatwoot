@@ -1,58 +1,36 @@
 require 'rails_helper'
 
-RSpec.describe 'Calls API', type: :request do
-  let(:account) { create(:account) }
-  let(:admin) { create(:user, account: account, role: :administrator) }
-  let(:agent) { create(:user, account: account, role: :agent) }
-  let(:inbox) { create(:inbox, account: account) }
-  let(:contact) { create(:contact, :with_phone_number, account: account) }
-  let(:conversation) { create(:conversation, account: account, inbox: inbox, contact: contact) }
-  let!(:agent_call) do
-    create(:call, account: account, inbox: inbox, conversation: conversation, contact: contact,
-                  accepted_by_agent: agent, status: 'completed', transcript: 'hello world')
+RSpec.describe 'Retired Calls routes', type: :routing do
+  paths = [
+    [:get, '/api/v1/accounts/1/calls'], [:post, '/api/v1/accounts/1/contacts/2/call'],
+    [:get, '/api/v1/accounts/1/whatsapp_calls/2'], [:post, '/api/v1/accounts/1/whatsapp_calls/initiate'],
+    [:post, '/api/v1/accounts/1/inboxes/2/conference'], [:delete, '/api/v1/accounts/1/inboxes/2/conference'],
+    [:get, '/api/v1/accounts/1/inboxes/2/conference/token'],
+    [:post, '/api/v1/accounts/1/integrations/dyte/create_a_meeting'],
+    [:post, '/api/v1/accounts/1/integrations/dyte/add_participant_to_meeting'],
+    [:post, '/api/v1/widget/integrations/dyte/add_participant_to_meeting']
+  ]
+  %w[accept reject terminate upload_recording].each do |action|
+    paths << [:post, "/api/v1/accounts/1/whatsapp_calls/2/#{action}"]
   end
-  let!(:other_call) do
-    create(:call, account: account, inbox: inbox, conversation: conversation, contact: contact, accepted_by_agent: admin)
+  %w[enable_whatsapp_calling disable_whatsapp_calling set_inbound_calls set_call_recording].each do |action|
+    paths << [:post, "/api/v1/accounts/1/inboxes/2/#{action}"]
+  end
+  %w[call status conference_status recording_status].each do |action|
+    paths << [:post, "/twilio/voice/#{action}/15551234567"]
   end
 
-  before { create(:inbox_member, user: agent, inbox: inbox) }
-
-  describe 'GET /api/v1/accounts/:account_id/calls' do
-    it 'returns 401 when unauthenticated' do
-      get "/api/v1/accounts/#{account.id}/calls"
-      expect(response).to have_http_status(:unauthorized)
+  paths.each do |method, path|
+    it "does not route #{method.upcase} #{path}" do
+      expect(method => path).not_to be_routable
     end
+  end
 
-    it 'returns the whole account with sensitive fields for an administrator' do
-      get "/api/v1/accounts/#{account.id}/calls", headers: admin.create_new_auth_token
+  it 'retains Twilio SMS callbacks' do
+    expect(post: '/twilio/callback').to route_to(controller: 'twilio/callback', action: 'create')
+  end
 
-      expect(response).to have_http_status(:ok)
-      body = response.parsed_body
-      expect(body['payload'].map { |c| c['id'] }).to contain_exactly(agent_call.id, other_call.id)
-      item = body['payload'].find { |c| c['id'] == agent_call.id }
-      expect(item['transcript']).to eq('hello world')
-      expect(item['contact']['phone_number']).to eq(contact.phone_number)
-      expect(item['inbox']).to include('id' => inbox.id, 'name' => inbox.name, 'channel_type' => inbox.channel_type)
-    end
-
-    it 'scopes the list to calls the agent accepted' do
-      get "/api/v1/accounts/#{account.id}/calls", headers: agent.create_new_auth_token
-
-      expect(response).to have_http_status(:ok)
-      body = response.parsed_body
-      expect(body['meta']['count']).to eq(1)
-      expect(body['payload'].map { |c| c['id'] }).to contain_exactly(agent_call.id)
-    end
-
-    it 'renders a null contact for calls whose contact no longer exists' do
-      # A contact merge can leave a call pointing at a deleted contact; the index must not 500.
-      contact.delete
-
-      get "/api/v1/accounts/#{account.id}/calls", headers: admin.create_new_auth_token
-
-      expect(response).to have_http_status(:ok)
-      item = response.parsed_body['payload'].find { |c| c['id'] == agent_call.id }
-      expect(item['contact']).to be_nil
-    end
+  it 'retains Website messages' do
+    expect(get: '/api/v1/widget/messages').to route_to(controller: 'api/v1/widget/messages', action: 'index', format: 'json')
   end
 end

@@ -17,15 +17,5 @@ class ArticleEmbedding < ApplicationRecord
   belongs_to :article
   has_neighbors :embedding, normalize: true
 
-  after_commit :update_response_embedding
-
   delegate :account_id, to: :article
-
-  private
-
-  def update_response_embedding
-    return unless saved_change_to_term? || embedding.nil?
-
-    Captain::Llm::UpdateEmbeddingJob.perform_later(self, term)
-  end
 end

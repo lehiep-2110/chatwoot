@@ -161,15 +161,6 @@ describe('customViewsHelper', () => {
       });
     });
 
-    it('should return id and title if attribute_key is campaign_id', () => {
-      const filter = { attribute_key: 'campaign_id', values: [1] };
-      const params = { campaigns: [{ id: 1, title: 'test' }] };
-      expect(getValuesForFilter(filter, params)).toEqual({
-        id: 1,
-        name: 'test',
-      });
-    });
-
     it('should return id and title if attribute_key is labels', () => {
       const filter = { attribute_key: 'labels', values: ['test'] };
       const params = { labels: [{ title: 'test' }] };
@@ -205,6 +196,28 @@ describe('customViewsHelper', () => {
   });
 
   describe('#generateValuesForEditCustomViews', () => {
+    it.each([
+      ['equal_to', [1, 2]],
+      ['not_equal_to', ['001', 2]],
+      ['is_present', []],
+      ['is_not_present', []],
+    ])(
+      'retains legacy campaign values for %s without metadata lookup',
+      (operator, values) => {
+        const filter = {
+          attribute_key: 'campaign_id',
+          filter_operator: operator,
+          values,
+        };
+        const params = { filterTypes: [], allCustomAttributes: [] };
+
+        expect(generateValuesForEditCustomViews(filter, params)).toEqual(
+          values
+        );
+        expect(filter.values).toEqual(values);
+      }
+    );
+
     it('should return id and name if inboxType is multi_select or search_select', () => {
       const filter = {
         attribute_key: 'assignee_id',

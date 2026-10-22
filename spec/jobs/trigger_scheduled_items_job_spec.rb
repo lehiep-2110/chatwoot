@@ -30,6 +30,11 @@ RSpec.describe TriggerScheduledItemsJob do
     described_class.perform_now
   end
 
+  it 'triggers AutomationRules::TriggerPendingExecutionsJob' do
+    expect(AutomationRules::TriggerPendingExecutionsJob).to receive(:perform_later).once
+    described_class.perform_now
+  end
+
   it 'does not trigger the hourly WhatsApp health scheduler' do
     expect(Channels::Whatsapp::HealthSyncSchedulerJob).not_to receive(:perform_later)
 
@@ -40,11 +45,14 @@ RSpec.describe TriggerScheduledItemsJob do
     let!(:twilio_sms) { create(:channel_twilio_sms, account: account) }
     let!(:twilio_inbox) { create(:inbox, channel: twilio_sms, account: account) }
 
-    it 'triggers Campaigns::TriggerOneoffCampaignJob' do
+    it 'does not enqueue campaign deliveries even when an active campaign is due' do
       campaign = create(:campaign, inbox: twilio_inbox, account: account)
       create(:campaign, inbox: twilio_inbox, account: account, scheduled_at: 10.days.after)
-      expect(Campaigns::TriggerOneoffCampaignJob).to receive(:perform_later).with(campaign).once
-      described_class.perform_now
+      original_attributes = campaign.reload.attributes
+
+      expect { described_class.perform_now }.not_to have_enqueued_job(Campaigns::TriggerOneoffCampaignJob)
+
+      expect(campaign.reload.attributes).to eq(original_attributes)
     end
 
     it 'does not trigger campaigns that are already processing' do

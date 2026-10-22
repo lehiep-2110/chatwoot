@@ -12,7 +12,7 @@ RSpec.describe 'Assignable Captain API', type: :request do
     create(:captain_inbox, captain_assistant: assistant, inbox: inbox)
   end
 
-  it 'returns the Captain attached to the inbox when requested' do
+  it 'does not offer a retired Captain even with the feature enabled and explicit opt-in' do
     get "/api/v1/accounts/#{account.id}/assignable_agents",
         params: { inbox_ids: [inbox.id], include_ai_assignees: true },
         headers: agent.create_new_auth_token,
@@ -20,7 +20,8 @@ RSpec.describe 'Assignable Captain API', type: :request do
 
     captain = response.parsed_body['payload'].find { |owner| owner['assignee_type'] == 'Captain::Assistant' }
 
-    expect(captain).to include('id' => assistant.id, 'name' => assistant.name)
+    expect(captain).to be_nil
+    expect(response.parsed_body['payload'].pluck('id')).to include(agent.id)
   end
 
   it 'does not return Captain without the opt-in' do

@@ -92,11 +92,6 @@ RSpec.describe Campaign do
       campaign.destroy!
       expect(described_class.exists?(campaign.id)).to be false
     end
-
-    it 'cant be triggered' do
-      expect(Twilio::OneoffSmsCampaignService).not_to receive(:new).with(campaign: campaign)
-      expect(campaign.trigger!).to be_nil
-    end
   end
 
   describe 'ensure_correct_campaign_attributes' do
@@ -112,46 +107,6 @@ RSpec.describe Campaign do
         expect(campaign.reload.campaign_type).to eq 'one_off'
         expect(campaign.scheduled_at.present?).to be true
       end
-
-      it 'calls twilio service on trigger!' do
-        sms_service = double
-        expect(Twilio::OneoffSmsCampaignService).to receive(:new).with(campaign: campaign).and_return(sms_service)
-        expect(sms_service).to receive(:perform)
-        campaign.save!
-        campaign.trigger!
-      end
-
-      it 'marks the campaign as processing before triggering the service' do
-        campaign.save!
-        sms_service = double
-
-        expect(Twilio::OneoffSmsCampaignService).to receive(:new).with(campaign: campaign).and_return(sms_service)
-        expect(sms_service).to receive(:perform) do
-          expect(campaign.reload.processing?).to be true
-        end
-
-        campaign.trigger!
-      end
-
-      it 'does not trigger a processing campaign again' do
-        campaign.save!
-        campaign.processing!
-
-        expect(Twilio::OneoffSmsCampaignService).not_to receive(:new)
-
-        campaign.trigger!
-      end
-
-      it 'keeps the campaign processing when triggering fails' do
-        campaign.save!
-        sms_service = double
-
-        expect(Twilio::OneoffSmsCampaignService).to receive(:new).with(campaign: campaign).and_return(sms_service)
-        expect(sms_service).to receive(:perform).and_raise(StandardError, 'provider error')
-
-        expect { campaign.trigger! }.to raise_error(StandardError, 'provider error')
-        expect(campaign.reload.processing?).to be true
-      end
     end
 
     context 'when SMS campaign' do
@@ -165,30 +120,6 @@ RSpec.describe Campaign do
         campaign.save!
         expect(campaign.reload.campaign_type).to eq 'one_off'
         expect(campaign.scheduled_at.present?).to be true
-      end
-
-      it 'calls sms service on trigger!' do
-        sms_service = double
-        expect(Sms::OneoffSmsCampaignService).to receive(:new).with(campaign: campaign).and_return(sms_service)
-        expect(sms_service).to receive(:perform)
-        campaign.save!
-        campaign.trigger!
-      end
-    end
-
-    context 'when WhatsApp campaign feature is disabled' do
-      let(:account) { create(:account) }
-      let(:whatsapp_channel) do
-        create(:channel_whatsapp, account: account, provider: 'whatsapp_cloud', validate_provider_config: false, sync_templates: false)
-      end
-      let(:campaign) { create(:campaign, account: account, inbox: whatsapp_channel.inbox) }
-
-      it 'does not mark the campaign as processing' do
-        expect(Whatsapp::OneoffCampaignService).not_to receive(:new)
-
-        campaign.trigger!
-
-        expect(campaign.reload.active?).to be true
       end
     end
 

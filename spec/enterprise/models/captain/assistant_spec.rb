@@ -82,63 +82,6 @@ RSpec.describe Captain::Assistant, type: :model do
     end
   end
 
-  describe '#responds_to_audience?' do
-    it 'returns true when no audience is configured' do
-      expect(assistant.responds_to_audience?(contact, conversation)).to be(true)
-    end
-
-    it 'returns true when the contact matches the audience' do
-      assistant.update!(config: assistant.config.merge('audience' => {
-                                                         'attribute_key' => 'country_code', 'filter_operator' => 'equal_to', 'values' => ['US']
-                                                       }))
-      expect(assistant.responds_to_audience?(contact, conversation)).to be(true)
-    end
-
-    it 'returns false when the contact does not match the audience' do
-      assistant.update!(config: assistant.config.merge('audience' => {
-                                                         'attribute_key' => 'country_code', 'filter_operator' => 'equal_to', 'values' => ['CA']
-                                                       }))
-      expect(assistant.responds_to_audience?(contact, conversation)).to be(false)
-    end
-  end
-
-  describe '#available_now?' do
-    let(:inbox) { create(:inbox, account: account) }
-    let(:scheduled_conversation) { create(:conversation, account: account, inbox: inbox, contact: contact) }
-
-    it 'is available when the window is blank or always' do
-      expect(assistant.available_now?(scheduled_conversation)).to be(true)
-      assistant.config['response_window'] = 'always'
-      expect(assistant.available_now?(scheduled_conversation)).to be(true)
-    end
-
-    it 'is available regardless when the inbox has no business hours configured' do
-      inbox.update!(working_hours_enabled: false)
-      assistant.config['response_window'] = 'business_hours'
-      expect(assistant.available_now?(scheduled_conversation)).to be(true)
-    end
-
-    context 'when the inbox has business hours enabled' do
-      before { inbox.update!(working_hours_enabled: true) }
-
-      it 'business_hours matches only when the inbox is open' do
-        assistant.config['response_window'] = 'business_hours'
-        allow(scheduled_conversation.inbox).to receive(:out_of_office?).and_return(false)
-        expect(assistant.available_now?(scheduled_conversation)).to be(true)
-        allow(scheduled_conversation.inbox).to receive(:out_of_office?).and_return(true)
-        expect(assistant.available_now?(scheduled_conversation)).to be(false)
-      end
-
-      it 'outside_business_hours matches only when the inbox is closed' do
-        assistant.config['response_window'] = 'outside_business_hours'
-        allow(scheduled_conversation.inbox).to receive(:out_of_office?).and_return(true)
-        expect(assistant.available_now?(scheduled_conversation)).to be(true)
-        allow(scheduled_conversation.inbox).to receive(:out_of_office?).and_return(false)
-        expect(assistant.available_now?(scheduled_conversation)).to be(false)
-      end
-    end
-  end
-
   describe 'response_window validation' do
     it 'accepts a blank response_window' do
       assistant.config['response_window'] = nil
@@ -278,42 +221,6 @@ RSpec.describe Captain::Assistant, type: :model do
     end
   end
 
-  describe '#agent_tools' do
-    it 'includes enabled custom tools from the assistant account' do
-      custom_tool = create(:captain_custom_tool, account: account)
-
-      tools = assistant.send(:agent_tools)
-
-      expect(tools.map(&:name)).to include(custom_tool.slug)
-      expect(tools.find { |tool| tool.name == custom_tool.slug }).to be_a(Captain::Tools::HttpTool)
-    end
-
-    it 'excludes disabled custom tools' do
-      custom_tool = create(:captain_custom_tool, :disabled, account: account)
-
-      tools = assistant.send(:agent_tools)
-
-      expect(tools.map(&:name)).not_to include(custom_tool.slug)
-    end
-
-    it 'excludes custom tools from other accounts' do
-      custom_tool = create(:captain_custom_tool)
-
-      tools = assistant.send(:agent_tools)
-
-      expect(tools.map(&:name)).not_to include(custom_tool.slug)
-    end
-
-    it 'keeps the built-in FAQ lookup and handoff tools' do
-      tools = assistant.send(:agent_tools)
-
-      expect(tools).to include(
-        an_instance_of(Captain::Tools::FaqLookupTool),
-        an_instance_of(Captain::Tools::HandoffTool)
-      )
-    end
-  end
-
   describe '#available_tool_ids' do
     it 'excludes disabled custom tools' do
       enabled_tool = create(:captain_custom_tool, account: account)
@@ -329,32 +236,6 @@ RSpec.describe Captain::Assistant, type: :model do
       disabled_tool = create(:captain_custom_tool, :disabled, account: account)
 
       expect(assistant.known_tool_ids).to include(disabled_tool.slug)
-    end
-  end
-
-  describe '#agent_instructions' do
-    it 'keeps the Assistant human handoff prompt unchanged' do
-      instructions = assistant.agent_instructions
-
-      expect(instructions).to include('# Human Handoff Protocol', 'captain--tools--handoff')
-      expect(instructions).not_to include('You are drafting a reply for a support agent to review.')
-    end
-
-    it 'renders the separate Copilot reply suggestion prompt when requested' do
-      assistant.update!(
-        response_guidelines: ['Include the raw guide URL https://yc.ms/eglb1H.'],
-        guardrails: ['Never add citation numbers or footnotes.']
-      )
-      scenario = create(:captain_scenario, assistant: assistant, account: account, title: 'Refund workflow')
-
-      instructions = assistant.agent_instructions(nil, prompt_template: 'copilot_reply_suggestion')
-
-      expect(instructions).to include(
-        'You are drafting a reply for a support agent to review.',
-        'Include the raw guide URL https://yc.ms/eglb1H.',
-        'Never add citation numbers or footnotes.'
-      )
-      expect(instructions).not_to include('# Human Handoff Protocol', scenario.title, "handoff_to_#{scenario.handoff_key}")
     end
   end
 end

@@ -504,4 +504,23 @@ RSpec.describe Webhooks::WhatsappEventsJob do
       job.perform_now(wb_params)
     end
   end
+
+  context 'when calling is retired' do
+    %w[calls call_permission_reply].each do |kind|
+      it "ignores #{kind} without dropping into messaging" do
+        value = params[:entry].first[:changes].first
+        if kind == 'calls'
+          value[:field] = 'calls'
+          value[:value][:calls] = [{ id: 'legacy-call', event: 'connect' }]
+        else
+          value[:field] = 'messages'
+          value[:value][:messages] = [{ from: '15551234567', type: 'interactive', interactive: { type: 'call_permission_reply' } }]
+        end
+        expect(Whatsapp::IncomingMessageWhatsappCloudService).not_to receive(:new)
+        expect(HTTParty).not_to receive(:post)
+
+        expect { job.perform_now(params) }.not_to(change { [Call.count, Conversation.count, Message.count, enqueued_jobs.size] })
+      end
+    end
+  end
 end

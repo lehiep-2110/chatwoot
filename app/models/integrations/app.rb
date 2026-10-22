@@ -69,7 +69,7 @@ class Integrations::App
     when 'notion'
       notion_enabled?(account)
     else
-      true
+      params[:id] != 'dyte'
     end
   end
 

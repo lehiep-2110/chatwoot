@@ -61,7 +61,7 @@ const addFilter = () => {
 const conditionsRef = useTemplateRef('conditionsRef');
 
 const isConditionsValid = () => {
-  return conditionsRef.value.every(condition => condition.validate());
+  return conditionsRef.value?.every(condition => condition.validate()) ?? true;
 };
 
 const updateSavedCustomViews = () => {
@@ -121,8 +121,30 @@ const outsideClickHandler = [
     </div>
     <ul class="grid gap-4 list-none min-w-0">
       <template v-for="(filter, index) in filters" :key="filter.id">
+        <li
+          v-if="filter.attributeKey === 'campaign_id'"
+          class="flex flex-wrap items-center gap-2 text-sm text-n-slate-11"
+        >
+          <span v-if="index > 0">
+            {{
+              t(
+                `FILTER.QUERY_DROPDOWN_LABELS.${filters[index - 1].queryOperator.toUpperCase()}`
+              )
+            }}
+          </span>
+          <span>{{ t('FILTER.ATTRIBUTES.CAMPAIGN_NAME') }}</span>
+          <span>{{
+            t(`FILTER.OPERATOR_LABELS.${filter.filterOperator}`)
+          }}</span>
+          <span>{{
+            []
+              .concat(filter.values)
+              .map(value => value?.id ?? value)
+              .join(', ')
+          }}</span>
+        </li>
         <ConditionRow
-          v-if="index === 0"
+          v-else-if="index === 0"
           ref="conditionsRef"
           :key="`filter-${filter.attributeKey}-0`"
           v-model:attribute-key="filter.attributeKey"

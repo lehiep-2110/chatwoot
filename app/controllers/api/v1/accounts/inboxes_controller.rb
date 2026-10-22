@@ -21,10 +21,6 @@ class Api::V1::Accounts::InboxesController < Api::V1::Accounts::BaseController
     @assignable_agents = @inbox.assignable_agents
   end
 
-  def campaigns
-    @campaigns = @inbox.campaigns
-  end
-
   def avatar
     @inbox.avatar.attachment.destroy! if @inbox.avatar.attached?
     head :ok

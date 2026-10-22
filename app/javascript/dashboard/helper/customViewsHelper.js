@@ -88,7 +88,6 @@ export const getValuesForFilter = (filter, params) => {
     agents,
     inboxes,
     teams,
-    campaigns,
     labels,
     priority,
     contacts,
@@ -104,8 +103,6 @@ export const getValuesForFilter = (filter, params) => {
       return getValuesName(values, teams, 'id', 'name');
     case 'contact_id':
       return getValuesForContact(values, contacts);
-    case 'campaign_id':
-      return getValuesName(values, campaigns, 'id', 'title');
     case 'labels':
       return getValuesForLabels(values, labels);
     case 'priority':
@@ -121,6 +118,9 @@ export const getValuesForFilter = (filter, params) => {
 
 export const generateValuesForEditCustomViews = (filter, params) => {
   const { attribute_key, filter_operator, values } = filter;
+  // Saved folders retain their original campaign IDs after Campaigns is retired.
+  if (attribute_key === 'campaign_id') return [...values];
+
   const { filterTypes, allCustomAttributes } = params;
   const inputType = getInputType(attribute_key, filter_operator, filterTypes);
 

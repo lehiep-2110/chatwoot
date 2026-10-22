@@ -172,13 +172,21 @@ const storeValues = {
   'agents/getAgents': ref([]),
   'inboxes/getInboxes': ref([]),
   'teams/getTeams': ref([]),
-  'campaigns/getAllCampaigns': ref([]),
 };
 
 describe('useConversationFilterContext', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     useMapGetter.mockImplementation(key => storeValues[key] || ref([]));
+  });
+
+  it('does not offer or fetch campaigns for new conversation filters', () => {
+    const { filterTypes } = useConversationFilterContext();
+
+    expect(
+      filterTypes.value.some(filter => filter.attributeKey === 'campaign_id')
+    ).toBe(false);
+    expect(useMapGetter).not.toHaveBeenCalledWith('campaigns/getAllCampaigns');
   });
 
   it('exposes contact as an async searchable conversation filter', () => {

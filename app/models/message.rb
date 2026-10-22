@@ -135,7 +135,10 @@ class Message < ApplicationRecord
   has_one :csat_survey_response, dependent: :destroy_async
   has_many :notifications, as: :primary_actor, dependent: :destroy_async
 
-  after_create_commit :execute_after_create_commit_callbacks
+  # Attachment after_commit callbacks upload files before transaction callbacks publish messages.
+  after_create do
+    ActiveRecord.after_all_transactions_commit { execute_after_create_commit_callbacks }
+  end
 
   after_update_commit :dispatch_update_event
   after_commit :reindex_for_search, if: :should_index?, on: [:create, :update]

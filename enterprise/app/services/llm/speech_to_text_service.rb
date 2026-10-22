@@ -1,6 +1,4 @@
-# Blob-in, text-out audio transcription shared by voice-note attachments
-# (Messages::AudioTranscriptionService) and voice-call recordings
-# (Voice::CallTranscriptionService).
+# Audio transcription shared by voice-note attachments (Messages::AudioTranscriptionService).
 class Llm::SpeechToTextService < Llm::LegacyBaseOpenAiService
   include Integrations::LlmInstrumentation
 

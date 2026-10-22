@@ -58,28 +58,7 @@ class Campaign < ApplicationRecord
   after_commit :set_display_id, unless: :display_id?
   after_destroy_commit :invalidate_filtered_unread_count_filters
 
-  def trigger!
-    return unless one_off?
-    return unless feature_enabled?
-    return unless mark_processing!
-
-    execute_campaign
-  end
-
   private
-
-  def feature_enabled?
-    inbox.inbox_type != 'Whatsapp' || account.feature_enabled?(:whatsapp_campaign)
-  end
-
-  def mark_processing!
-    # Multiple scheduler jobs can pick the same active campaign; lock before flipping status to avoid duplicate sends.
-    with_lock do
-      next if completed? || processing?
-
-      update!(campaign_status: :processing, started_at: Time.current)
-    end
-  end
 
   def marking_completed?
     will_save_change_to_campaign_status? && completed?
@@ -87,17 +66,6 @@ class Campaign < ApplicationRecord
 
   def set_completed_at
     self.completed_at ||= Time.current
-  end
-
-  def execute_campaign
-    case inbox.inbox_type
-    when 'Twilio SMS'
-      Twilio::OneoffSmsCampaignService.new(campaign: self).perform
-    when 'Sms'
-      Sms::OneoffSmsCampaignService.new(campaign: self).perform
-    when 'Whatsapp'
-      Whatsapp::OneoffCampaignService.new(campaign: self).perform
-    end
   end
 
   def invalidate_filtered_unread_count_filters

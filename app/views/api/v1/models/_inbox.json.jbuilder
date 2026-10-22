@@ -159,21 +159,21 @@ end
 
 ## Voice attributes for TwilioSms
 if resource.twilio? && resource.channel.respond_to?(:voice_enabled?)
-  json.voice_enabled resource.channel.voice_enabled?
+  json.voice_enabled false
   json.inbound_calls_enabled resource.channel.inbound_calls_enabled?
   json.recording_enabled resource.channel.try(:recording_enabled?)
   json.transcription_enabled resource.channel.try(:transcription_enabled?)
-  json.voice_configured resource.channel.try(:twiml_app_sid).present?
+  json.voice_configured false
   json.has_api_key_secret resource.channel.try(:api_key_secret).present?
   if resource.channel.try(:twiml_app_sid).present?
-    json.voice_call_webhook_url resource.channel.try(:voice_call_webhook_url)
-    json.voice_status_webhook_url resource.channel.try(:voice_status_webhook_url)
+    json.voice_call_webhook_url nil
+    json.voice_status_webhook_url nil
   end
 end
 
 ## Voice attribute for WhatsApp Cloud (only embedded-signup channels surface true)
 if resource.channel_type == 'Channel::Whatsapp' && resource.channel.respond_to?(:voice_enabled?)
-  json.voice_enabled resource.channel.voice_enabled?
+  json.voice_enabled false
   json.inbound_calls_enabled resource.channel.inbound_calls_enabled?
   json.recording_enabled resource.channel.try(:recording_enabled?)
   json.transcription_enabled resource.channel.try(:transcription_enabled?)
