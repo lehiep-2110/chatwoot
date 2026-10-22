@@ -186,7 +186,9 @@ export const actions = {
     commit('toggleAgentTypingStatus', data);
   },
 
-  toggleUserTyping: async (_, data) => {
+  toggleUserTyping: async ({ rootGetters }, data) => {
+    if (!rootGetters['conversationAttributes/getConversationParams'].id) return;
+
     try {
       await toggleTyping(data);
     } catch (error) {
