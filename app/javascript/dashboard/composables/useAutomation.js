@@ -35,7 +35,6 @@ export function useAutomation(startValue = null) {
     inboxes,
     labels,
     teams,
-    slaPolicies,
   } = useAutomationValues();
 
   const automation = ref(startValue);
@@ -190,7 +189,6 @@ export function useAutomation(startValue = null) {
     inboxes,
     labels,
     teams,
-    slaPolicies,
     booleanFilterOptions,
     statusFilterOptions,
     onEventChange,

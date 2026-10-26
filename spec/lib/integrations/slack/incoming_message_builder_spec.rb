@@ -85,15 +85,17 @@ describe Integrations::Slack::IncomingMessageBuilder do
         expect(conversation.messages.last.content).to eql('this is test https://chatwoot.com Hey @Sojan Test again')
       end
 
-      it 'creates a private note' do
-        expect(hook).not_to be_nil
-        messages_count = conversation.messages.count
+      it 'ignores retired private-note events without publishing their contents' do
         builder = described_class.new(private_message_params)
-        allow(builder).to receive(:resolve_slack_sender).and_return([nil, nil, nil])
-        builder.perform
-        expect(conversation.messages.count).to eql(messages_count + 1)
-        expect(conversation.messages.last.content).to eql('pRivate: A private note message')
-        expect(conversation.messages.last.private).to be(true)
+        expect(builder).not_to receive(:resolve_slack_sender)
+        expect { builder.perform }.not_to change(Message, :count)
+      end
+
+      it 'ignores outgoing Slack audio without downloading or publishing it' do
+        message_params[:event][:files] = [{ mimetype: 'audio/ogg', url_private: 'https://example.com/audio.ogg' }]
+        builder = described_class.new(message_params)
+        expect(builder).not_to receive(:resolve_slack_sender)
+        expect { builder.perform }.not_to change(Message, :count)
       end
 
       it 'does not create message for invalid event type' do

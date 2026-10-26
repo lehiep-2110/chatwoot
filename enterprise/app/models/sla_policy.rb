@@ -17,9 +17,9 @@
 #
 #  index_sla_policies_on_account_id  (account_id)
 #
+# Historical policies remain for ownership, cleanup and old notification serialization.
 class SlaPolicy < ApplicationRecord
   belongs_to :account
-  validates :name, presence: true
 
   has_many :conversations, dependent: :nullify
   has_many :applied_slas, dependent: :destroy_async

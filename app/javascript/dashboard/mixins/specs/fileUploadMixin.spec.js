@@ -59,6 +59,23 @@ describe('FileUploadMixin', () => {
     });
   });
 
+  it.each([true, false])(
+    'rejects audio before upload when direct upload is %s',
+    direct => {
+      wrapper.vm.globalConfig.directUploadsEnabled = direct;
+      wrapper.vm.onDirectFileUpload = vi.fn();
+      wrapper.vm.onIndirectFileUpload = vi.fn();
+      wrapper.vm.onFileUpload({
+        file: new File(['audio'], 'sample.ogg', { type: 'audio/ogg' }),
+      });
+      expect(wrapper.vm.onDirectFileUpload).not.toHaveBeenCalled();
+      expect(wrapper.vm.onIndirectFileUpload).not.toHaveBeenCalled();
+      expect(useAlert).toHaveBeenCalledWith(
+        'CONVERSATION.REPLYBOX.AUDIO_MESSAGES_DISABLED'
+      );
+    }
+  );
+
   it('should call onDirectFileUpload when direct uploads are enabled', () => {
     wrapper.vm.onDirectFileUpload = vi.fn();
     wrapper.vm.onFileUpload({});

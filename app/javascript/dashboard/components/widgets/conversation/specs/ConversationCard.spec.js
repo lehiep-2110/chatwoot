@@ -38,13 +38,13 @@ describe('ConversationCard', () => {
     expect(wrapper.findComponent({ name: 'CardLabels' }).exists()).toBe(false);
   });
 
-  it('shows the labels row when an active applied SLA is present', () => {
+  it('does not reserve the labels row for retired applied SLA data', () => {
     const wrapper = mountComponent({
       sla_policy_id: 1,
       applied_sla: { id: 1 },
     });
 
-    expect(wrapper.findComponent({ name: 'CardLabels' }).exists()).toBe(true);
+    expect(wrapper.findComponent({ name: 'CardLabels' }).exists()).toBe(false);
   });
 
   it('does not reserve the labels row when the contact is blocked', () => {

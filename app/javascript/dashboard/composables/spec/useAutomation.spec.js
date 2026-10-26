@@ -16,7 +16,6 @@ import {
   inboxes,
   languages,
   countries,
-  slaPolicies,
 } from 'dashboard/helper/specs/fixtures/automationFixtures.js';
 
 vi.mock('dashboard/composables/store');
@@ -43,7 +42,6 @@ describe('useAutomation', () => {
         'inboxes/getInboxes': inboxes,
         'labels/getLabels': labels,
         'teams/getTeams': teams,
-        'sla/getSLA': slaPolicies,
       };
       return { value: getterMap[getter] };
     });
@@ -95,8 +93,6 @@ describe('useAutomation', () => {
           return teams;
         case 'send_message':
           return [];
-        case 'add_sla':
-          return slaPolicies;
         case 'change_priority':
           return priorityOptions;
         default:
@@ -112,7 +108,6 @@ describe('useAutomation', () => {
       inboxes: computedInboxes,
       labels: computedLabels,
       teams: computedTeams,
-      slaPolicies: computedSlaPolicies,
       statusFilterOptions: computedStatusFilterOptions,
     } = useAutomation();
 
@@ -121,7 +116,6 @@ describe('useAutomation', () => {
     expect(computedInboxes.value).toEqual(inboxes);
     expect(computedLabels.value).toEqual(labels);
     expect(computedTeams.value).toEqual(teams);
-    expect(computedSlaPolicies.value).toEqual(slaPolicies);
     expect(
       computedStatusFilterOptions.value.filter(option => option.id === 'all')
     ).toHaveLength(1);
@@ -246,7 +240,6 @@ describe('useAutomation', () => {
     ]);
     expect(getActionDropdownValues('send_email_to_team')).toEqual(teams);
     expect(getActionDropdownValues('send_message')).toEqual([]);
-    expect(getActionDropdownValues('add_sla')).toEqual(slaPolicies);
     expect(getActionDropdownValues('change_priority')).toEqual(priorityOptions);
   });
 

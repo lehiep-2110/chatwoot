@@ -16,8 +16,6 @@ tags:
     description: Manage agent bots within accounts
   - name: Agents
     description: Manage agents
-  - name: Canned Responses
-    description: Manage canned responses
   - name: Contacts
     description: Manage contacts
   - name: Contact Labels

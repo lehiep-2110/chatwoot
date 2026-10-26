@@ -4,7 +4,7 @@ import AddAutomationRule from './AddAutomationRule.vue';
 import EditAutomationRule from './EditAutomationRule.vue';
 import BaseSettingsHeader from '../components/BaseSettingsHeader.vue';
 import SettingsLayout from '../SettingsLayout.vue';
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { until } from '@vueuse/core';
 import { useI18n } from 'vue-i18n';
 import {
@@ -115,24 +115,6 @@ const deleteRejectText = computed(
 
 const deleteMessage = computed(() => ` ${selectedAutomation.value.name}?`);
 
-const isSLAEnabled = computed(() =>
-  getters['accounts/isFeatureEnabledonAccount'].value(accountId.value, 'sla')
-);
-
-let slaFetchPromise;
-
-// Account feature flags may load after this page mounts, so watch the SLA flag
-// to ensure its options are fetched after a hard refresh.
-watch(
-  isSLAEnabled,
-  isEnabled => {
-    if (isEnabled) {
-      slaFetchPromise = store.dispatch('sla/get');
-    }
-  },
-  { immediate: true }
-);
-
 const showDelayDisabledBanner = computed(
   () =>
     !isDelayedAutomationsEnabled.value &&
@@ -160,10 +142,6 @@ const hideAddPopup = () => {
 const openEditPopup = async response => {
   selectedAutomation.value = { ...response };
   await until(() => accountUiFlags.value.isFetchingItem).toBe(false);
-  if (isSLAEnabled.value) {
-    slaFetchPromise ||= store.dispatch('sla/get');
-    await slaFetchPromise;
-  }
   editDialogRef.value?.open(response);
 };
 const hideEditPopup = () => {

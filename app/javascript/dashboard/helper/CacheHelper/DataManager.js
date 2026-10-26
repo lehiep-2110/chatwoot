@@ -3,7 +3,7 @@ import { DATA_VERSION, INBOX_CACHE_INVALIDATION_VERSION } from './version';
 
 export class DataManager {
   constructor(accountId) {
-    this.modelsToSync = ['inbox', 'label', 'team', 'canned_response'];
+    this.modelsToSync = ['inbox', 'label', 'team'];
     this.accountId = accountId;
     this.db = null;
   }
@@ -32,7 +32,6 @@ export class DataManager {
         createStore('inbox', { keyPath: 'id' });
         createStore('label', { keyPath: 'id' });
         createStore('team', { keyPath: 'id' });
-        createStore('canned_response', { keyPath: 'id' });
       },
     });
 

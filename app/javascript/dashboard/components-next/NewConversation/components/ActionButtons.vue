@@ -1,5 +1,5 @@
 <script setup>
-import { defineAsyncComponent, ref, computed, watch, nextTick } from 'vue';
+import { defineAsyncComponent, ref, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useUISettings } from 'dashboard/composables/useUISettings';
 import { useFileUpload } from 'dashboard/composables/useFileUpload';
@@ -20,15 +20,11 @@ const props = defineProps({
   isTwilioWhatsAppInbox: { type: Boolean, default: false },
   // eslint-disable-next-line vue/no-unused-properties
   messageTemplates: { type: Array, default: () => [] },
-  channelType: { type: String, default: '' },
   isLoading: { type: Boolean, default: false },
   disableSendButton: { type: Boolean, default: false },
-  hasSelectedInbox: { type: Boolean, default: false },
   hasNoInbox: { type: Boolean, default: false },
   isDropdownActive: { type: Boolean, default: false },
-  messageSignature: { type: String, default: '' },
   inboxId: { type: Number, default: null },
-  voiceEnabled: { type: Boolean, default: false },
 });
 
 const emit = defineEmits([
@@ -37,8 +33,6 @@ const emit = defineEmits([
   'sendWhatsappMessage',
   'sendTwilioMessage',
   'insertEmoji',
-  'addSignature',
-  'removeSignature',
   'attachFile',
 ]);
 
@@ -58,15 +52,7 @@ const EmojiIconPicker = defineAsyncComponent(
     import('dashboard/components-next/emoji-icon-picker/EmojiIconPicker.vue')
 );
 
-const {
-  fetchSignatureFlagFromUISettings,
-  setSignatureFlagForInbox,
-  isEditorHotKeyEnabled,
-} = useUISettings();
-
-const sendWithSignature = computed(() => {
-  return fetchSignatureFlagFromUISettings(props.channelType);
-});
+const { isEditorHotKeyEnabled } = useUISettings();
 
 const showTwilioContentTemplates = computed(() => {
   return props.isTwilioWhatsAppInbox && props.inboxId;
@@ -81,39 +67,6 @@ const shouldShowEmojiButton = computed(() => {
 const isRegularMessageMode = computed(() => {
   return !props.isWhatsappInbox && !props.isTwilioWhatsAppInbox;
 });
-
-const shouldShowSignatureButton = computed(() => {
-  return (
-    props.hasSelectedInbox && isRegularMessageMode.value && !props.voiceEnabled
-  );
-});
-
-const setSignature = () => {
-  if (props.messageSignature) {
-    if (sendWithSignature.value) {
-      emit('addSignature', props.messageSignature);
-    } else {
-      emit('removeSignature', props.messageSignature);
-    }
-  }
-};
-
-const toggleMessageSignature = () => {
-  setSignatureFlagForInbox(props.channelType, !sendWithSignature.value);
-};
-
-// Added this watch to dynamically set signature on target inbox change.
-// Only targetInbox has value and is Advance Editor(used by isEmailOrWebWidgetInbox)
-// Set the signature only if the inbox based flag is true
-watch(
-  () => props.hasSelectedInbox,
-  newValue => {
-    nextTick(() => {
-      if (newValue && !props.voiceEnabled) setSignature();
-    });
-  },
-  { immediate: true }
-);
 
 const onClickInsertEmoji = emoji => {
   emit('insertEmoji', emoji);
@@ -245,14 +198,6 @@ useEventListener(document, 'paste', onPaste);
           class="!w-10 relative"
         />
       </FileUpload>
-      <Button
-        v-if="shouldShowSignatureButton"
-        icon="i-lucide-signature"
-        color="slate"
-        size="sm"
-        class="!w-10"
-        @click="toggleMessageSignature"
-      />
     </div>
 
     <div class="flex gap-2 items-center">

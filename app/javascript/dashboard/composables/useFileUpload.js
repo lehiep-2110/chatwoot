@@ -107,6 +107,10 @@ export const useFileUpload = ({ inbox, attachFile, isPrivateNote = false }) => {
   };
 
   const onFileUpload = file => {
+    if ((file?.file?.type || file?.type || '').startsWith('audio/')) {
+      useAlert(t('CONVERSATION.REPLYBOX.AUDIO_MESSAGES_DISABLED'));
+      return;
+    }
     if (globalConfig.value.directUploadsEnabled) {
       handleDirectFileUpload(file);
     } else {

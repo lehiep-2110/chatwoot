@@ -22,16 +22,16 @@ class WrappedClient extends CacheEnabledApiClient {
   }
 }
 
-// Canned responses answer with a bare array, so they override both hooks. The cached read
+// Teams answer with a bare array, so they override both hooks. The cached read
 // has to hand back the same shape as the network read or callers break on a cache hit.
 class BareArrayClient extends CacheEnabledApiClient {
   constructor() {
-    super('canned_responses', { accountScoped: true });
+    super('teams', { accountScoped: true });
   }
 
   // eslint-disable-next-line class-methods-use-this
   get cacheModelName() {
-    return 'canned_response';
+    return 'team';
   }
 
   // eslint-disable-next-line class-methods-use-this
@@ -50,7 +50,7 @@ describe('CacheEnabledApiClient', () => {
     { id: 1, name: 'inbox-1' },
     { id: 2, name: 'inbox-2' },
   ];
-  const cannedResponses = [{ id: 1, short_code: 'hello', content: 'Hi there' }];
+  const teams = [{ id: 1, name: 'Recruitment' }];
 
   let openClients = [];
 
@@ -98,20 +98,18 @@ describe('CacheEnabledApiClient', () => {
     // A never-written cache key is the same '0000000000' for every account
     const sharedKey = '0000000000';
     stubEndpoints({
-      cacheKeys: { canned_response: sharedKey },
-      payload: cannedResponses,
+      cacheKeys: { team: sharedKey },
+      payload: teams,
     });
     window.history.pushState({}, '', `/app/accounts/${ACCOUNT_ID}/dashboard`);
     await client.get(true);
     client.dataManager.db?.close();
 
-    const otherAccountResponses = [
-      { id: 99, short_code: 'other-account', content: 'Should stay private' },
-    ];
+    const otherAccountResponses = [{ id: 99, name: 'Other company team' }];
     window.history.pushState({}, '', '/app/accounts/9/dashboard');
     axios.get.mockClear();
     stubEndpoints({
-      cacheKeys: { canned_response: sharedKey },
+      cacheKeys: { team: sharedKey },
       payload: otherAccountResponses,
     });
     const response = await client.get(true);
@@ -192,8 +190,8 @@ describe('CacheEnabledApiClient', () => {
 
   it('returns the same shape from the cache as from the network for a bare array resource', async () => {
     stubEndpoints({
-      cacheKeys: { canned_response: 'key-1' },
-      payload: cannedResponses,
+      cacheKeys: { team: 'key-1' },
+      payload: teams,
     });
     const client = buildClient(BareArrayClient);
 
@@ -201,8 +199,8 @@ describe('CacheEnabledApiClient', () => {
     axios.get.mockClear();
     const fromCache = await client.get(true);
 
-    expect(fromNetwork.data).toEqual(cannedResponses);
-    expect(fromCache.data).toEqual(cannedResponses);
+    expect(fromNetwork.data).toEqual(teams);
+    expect(fromCache.data).toEqual(teams);
     expect(listRequests()).toHaveLength(0);
   });
 

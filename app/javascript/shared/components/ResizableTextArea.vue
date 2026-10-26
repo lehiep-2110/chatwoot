@@ -1,9 +1,4 @@
 <script>
-import {
-  appendSignature,
-  removeSignature,
-  extractTextFromMarkdown,
-} from 'dashboard/helper/editorHelper';
 import { createTypingIndicator } from '@chatwoot/utils';
 
 const TYPING_INDICATOR_IDLE_TIME = 4000;
@@ -21,23 +16,9 @@ export default {
       type: Number,
       default: 2,
     },
-    signature: {
-      type: String,
-      default: '',
-    },
     rows: {
       type: Number,
       default: 2,
-    },
-    // add this as a prop, so that we won't have to add useUISettings
-    sendWithSignature: {
-      type: Boolean,
-      default: false,
-    },
-    // allowSignature is a kill switch, ensuring no signature methods are triggered except when this flag is true
-    allowSignature: {
-      type: Boolean,
-      default: false,
     },
   },
   emits: [
@@ -61,13 +42,6 @@ export default {
       ),
     };
   },
-  computed: {
-    cleanedSignature() {
-      // clean the signature, this will ensure that we don't have
-      // any markdown formatted text in the signature
-      return extractTextFromMarkdown(this.signature);
-    },
-  },
   watch: {
     modelValue() {
       this.resizeTextarea();
@@ -80,11 +54,6 @@ export default {
         this.$nextTick(() => {
           this.setCursor();
         });
-      }
-    },
-    sendWithSignature(newValue) {
-      if (this.allowSignature) {
-        this.toggleSignatureInEditor(newValue);
       }
     },
   },
@@ -107,35 +76,8 @@ export default {
         this.$el.style.height = `${this.$el.scrollHeight}px`;
       }
     },
-    // The toggleSignatureInEditor gets the new value from the
-    // watcher, this means that if the value is true, the signature
-    // is supposed to be added, else we remove it.
-    toggleSignatureInEditor(signatureEnabled) {
-      let valueWithSignature = signatureEnabled
-        ? appendSignature(this.modelValue, this.cleanedSignature)
-        : removeSignature(this.modelValue, this.cleanedSignature);
-
-      // Clean up whitespace when removing signature from empty body
-      if (!signatureEnabled && !valueWithSignature.trim()) {
-        valueWithSignature = '';
-      }
-
-      this.$emit('update:modelValue', valueWithSignature);
-      this.$emit('input', valueWithSignature);
-
-      this.$nextTick(() => {
-        this.resizeTextarea();
-        this.setCursor();
-      });
-    },
     setCursor() {
-      const bodyWithoutSignature = removeSignature(
-        this.modelValue,
-        this.cleanedSignature
-      );
-
-      // only trim at end, so if there are spaces at the start, those are not removed
-      const bodyEndsAt = bodyWithoutSignature.trimEnd().length;
+      const bodyEndsAt = this.modelValue.trimEnd().length;
       const textarea = this.$refs.textarea;
 
       if (textarea) {

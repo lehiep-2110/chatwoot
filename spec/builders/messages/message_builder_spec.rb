@@ -16,6 +16,16 @@ describe Messages::MessageBuilder do
   end
 
   describe '#perform' do
+    [true, 'true'].each do |private_value|
+      it "rejects a private message before building it (#{private_value.inspect})" do
+        params[:private] = private_value
+        expect { message_builder }.to raise_error do |error|
+          expect(error.class.name).to eq('CustomExceptions::PrivateNotesDisabled')
+        end
+        expect(conversation.reload.messages).to be_empty
+      end
+    end
+
     it 'creates a message' do
       message = message_builder
       expect(message.content).to eq params[:content]
@@ -158,9 +168,45 @@ describe Messages::MessageBuilder do
                                          })
       end
 
-      it 'sets is_voice_message in attachment meta' do
-        message = message_builder
+      it 'rejects an outgoing voice message' do
+        expect { message_builder }.to raise_error do |error|
+          expect(error.class.name).to eq('CustomExceptions::VoiceMessagesDisabled')
+        end
+        expect(conversation.reload.messages).to be_empty
+      end
+
+      it 'preserves incoming API audio and its voice metadata' do
+        channel = create(:channel_api, account: account)
+        incoming_conversation = create(:conversation, inbox: channel.inbox, account: account)
+        params[:message_type] = 'incoming'
+        message = described_class.new(user, incoming_conversation, params).perform
+        expect(message).to be_incoming
+        expect(message.attachments.first).to be_audio
         expect(message.attachments.first.meta).to include('is_voice_message' => true)
+      end
+    end
+
+    context 'when audio is uploaded without a voice flag' do
+      let(:params) do
+        ActionController::Parameters.new(attachments: [Rack::Test::UploadedFile.new('spec/assets/sample.ogg', 'audio/ogg')])
+      end
+
+      it 'rejects the outgoing audio file without creating a message' do
+        expect { message_builder }.to raise_error do |error|
+          expect(error.class.name).to eq('CustomExceptions::VoiceMessagesDisabled')
+        end
+        expect(conversation.reload.messages).to be_empty
+      end
+
+      it 'rejects a signed audio blob as well' do
+        blob = File.open(Rails.root.join('spec/assets/sample.ogg')) do |audio|
+          ActiveStorage::Blob.create_and_upload!(io: audio, filename: 'sample.ogg', content_type: 'audio/ogg')
+        end
+        params[:attachments] = [blob.signed_id]
+        expect { message_builder }.to raise_error do |error|
+          expect(error.class.name).to eq('CustomExceptions::VoiceMessagesDisabled')
+        end
+        expect(conversation.reload.messages).to be_empty
       end
     end
 
@@ -231,10 +277,9 @@ describe Messages::MessageBuilder do
                                                       private: true
                                                     })
 
-          message = described_class.new(user, conversation, params).perform
-
-          expect(message.content_attributes.dig('email', 'html_content')).to be_nil
-          expect(message.content_attributes.dig('email', 'text_content')).to be_nil
+          expect { described_class.new(user, conversation, params).perform }.to raise_error do |error|
+            expect(error.class.name).to eq('CustomExceptions::PrivateNotesDisabled')
+          end
         end
 
         it 'falls back to default behavior when no custom email content is provided' do
@@ -305,10 +350,9 @@ describe Messages::MessageBuilder do
                                                       private: true
                                                     })
 
-          message = described_class.new(user, conversation, params).perform
-
-          expect(message.content_attributes.dig('email', 'html_content')).to be_nil
-          expect(message.content_attributes.dig('email', 'text_content')).to be_nil
+          expect { described_class.new(user, conversation, params).perform }.to raise_error do |error|
+            expect(error.class.name).to eq('CustomExceptions::PrivateNotesDisabled')
+          end
         end
       end
     end

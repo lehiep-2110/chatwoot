@@ -9,10 +9,25 @@ RSpec.describe NotificationFinder do
     create(:notification, :snoozed, account: account, user: user)
     create_list(:notification, 2, :read, account: account, user: user)
     create_list(:notification, 3, account: account, user: user)
+    user.notifications.each do |notification|
+      create(:inbox_member, user: user, inbox: notification.primary_actor.inbox)
+    end
   end
 
   describe '#notifications' do
     subject { notification_finder.notifications }
+
+    context 'when all inbox memberships are revoked' do
+      let(:params) { { includes: %w[read snoozed] } }
+
+      before { user.inbox_members.destroy_all }
+
+      it 'hides historical conversation notifications and their counts' do
+        expect(subject).to be_empty
+        expect(notification_finder.count).to eq(0)
+        expect(notification_finder.unread_count).to eq(0)
+      end
+    end
 
     context 'with default params (empty)' do
       let(:params) { {} }

@@ -1,6 +1,10 @@
 module Integrations::Slack::SlackMessageHelper
   def process_message_payload
     return unless conversation
+    return { status: 'ignored', reason: 'private_notes_disabled' } if private_note?
+    if params.dig(:event, :files)&.any? { |file| file[:mimetype].to_s.start_with?('audio/') }
+      return { status: 'ignored', reason: 'voice_messages_disabled' }
+    end
 
     handle_conversation
     success_response
@@ -37,7 +41,7 @@ module Integrations::Slack::SlackMessageHelper
       inbox_id: conversation.inbox_id,
       content: formatted_message_content,
       external_source_id_slack: params[:event][:ts],
-      private: private_note?,
+      private: false,
       sender: resolved_sender,
       additional_attributes: slack_sender_attrs
     )

@@ -276,11 +276,7 @@ const hasAutomationMutated = computed(() => {
 });
 
 const automationActionTypes = computed(() => {
-  const actionTypes = isCloudFeatureEnabled('sla')
-    ? AUTOMATION_ACTION_TYPES
-    : AUTOMATION_ACTION_TYPES.filter(({ key }) => key !== 'add_sla');
-
-  return actionTypes.map(action => ({
+  return AUTOMATION_ACTION_TYPES.map(action => ({
     ...action,
     label: t(`AUTOMATION.ACTIONS.${action.label}`),
     icon: getActionIcon(action.key),

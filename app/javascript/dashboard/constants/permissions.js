@@ -1,12 +1,3 @@
-export const AVAILABLE_CUSTOM_ROLE_PERMISSIONS = [
-  'conversation_manage',
-  'conversation_unassigned_manage',
-  'conversation_participating_manage',
-  'contact_manage',
-  'report_manage',
-  'knowledge_base_manage',
-];
-
 export const ROLES = ['agent', 'administrator'];
 
 export const CONVERSATION_PERMISSIONS = [

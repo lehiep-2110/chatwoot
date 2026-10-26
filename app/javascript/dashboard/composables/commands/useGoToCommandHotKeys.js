@@ -6,7 +6,6 @@ import { usePolicy } from 'dashboard/composables/usePolicy';
 import {
   ICON_BLOCKS,
   ICON_BRIEFCASE,
-  ICON_CLOCK_ALERT,
   ICON_CODE,
   ICON_CONTACT,
   ICON_CREDIT_CARD,
@@ -14,11 +13,9 @@ import {
   ICON_INBOX,
   ICON_LAYOUT_TEMPLATE,
   ICON_MESSAGE_CIRCLE,
-  ICON_MESSAGE_QUOTE,
   ICON_REPEAT,
   ICON_SQUARE_USER,
   ICON_TAGS,
-  ICON_TOY_BRICK,
   ICON_USERS,
   ICON_USER_PEN,
 } from 'dashboard/helper/commandbar/icons';
@@ -97,27 +94,6 @@ const GO_TO_COMMANDS = [
     section: SECTION_SETTINGS,
     icon: ICON_REPEAT,
     routeName: 'automation_list',
-  },
-  {
-    id: 'open_macro_settings',
-    title: 'COMMAND_BAR.COMMANDS.GO_TO_SETTINGS_MACROS',
-    section: SECTION_SETTINGS,
-    icon: ICON_TOY_BRICK,
-    routeName: 'macros_wrapper',
-  },
-  {
-    id: 'open_canned_response_settings',
-    title: 'COMMAND_BAR.COMMANDS.GO_TO_SETTINGS_CANNED_RESPONSES',
-    section: SECTION_SETTINGS,
-    icon: ICON_MESSAGE_QUOTE,
-    routeName: 'canned_list',
-  },
-  {
-    id: 'open_sla_settings',
-    title: 'COMMAND_BAR.COMMANDS.GO_TO_SETTINGS_SLA',
-    section: SECTION_SETTINGS,
-    icon: ICON_CLOCK_ALERT,
-    routeName: 'sla_list',
   },
   {
     id: 'open_applications_settings',

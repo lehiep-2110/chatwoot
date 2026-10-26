@@ -1,42 +1,15 @@
-# frozen_string_literal: true
-
 require 'rails_helper'
 
 RSpec.describe Conversations::EventDataPresenter do
-  let!(:presenter) { described_class.new(conversation) }
-  let!(:conversation) { create(:conversation) }
-  let!(:applied_sla) { create(:applied_sla, conversation: conversation) }
-  let!(:sla_event) { create(:sla_event, conversation: conversation, applied_sla: applied_sla) }
+  let(:conversation) { create(:conversation) }
 
-  describe '#push_data' do
-    it 'returns push event payload with applied sla & sla events if the feature is enabled' do
-      conversation.account.enable_features!('sla')
+  it 'does not calculate or publish SLA data even when the reserved flag is enabled' do
+    conversation.account.enable_features!('sla')
+    conversation.update!(sla_policy_id: create(:sla_policy, account: conversation.account).id)
 
-      expect(presenter.push_data).to include(
-        {
-          applied_sla: applied_sla.push_event_data,
-          sla_events: [sla_event.push_event_data]
-        }
-      )
-    end
+    payload = described_class.new(conversation).push_data
 
-    it 'returns push event payload without active sla data when contact is blocked' do
-      conversation.account.enable_features!('sla')
-      conversation.contact.update!(blocked: true)
-
-      expect(presenter.push_data).to include(
-        {
-          applied_sla: nil,
-          sla_events: [],
-          sla_policy_id: nil
-        }
-      )
-    end
-
-    it 'returns push event payload without applied sla & sla events if the feature is disabled' do
-      conversation.account.disable_features!('sla')
-
-      expect(presenter.push_data).not_to include(:applied_sla, :sla_events)
-    end
+    expect(payload.keys).not_to include(:applied_sla, :sla_events, :sla_policy_id)
+    expect(payload).to include(id: conversation.display_id, inbox_id: conversation.inbox_id, status: conversation.status)
   end
 end

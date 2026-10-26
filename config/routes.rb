@@ -81,15 +81,9 @@ Rails.application.routes.draw do
               post :reauthorize_page
             end
           end
-          resources :canned_responses, only: [:index, :create, :update, :destroy]
           resources :automation_rules, only: [:index, :create, :show, :update, :destroy] do
             post :clone
           end
-          resources :macros, only: [:index, :create, :show, :update, :destroy] do
-            post :execute, on: :member
-          end
-          resources :sla_policies, only: [:index, :create, :show, :update, :destroy]
-          resources :custom_roles, only: [:index, :create, :show, :update, :destroy]
           resources :agent_capacity_policies, only: [:index, :create, :show, :update, :destroy] do
             scope module: :agent_capacity_policies do
               resources :users, only: [:index, :create, :destroy]
@@ -204,12 +198,6 @@ Rails.application.routes.draw do
             end
             member do
               patch :update if ChatwootApp.enterprise?
-            end
-          end
-          resources :applied_slas, only: [:index] do
-            collection do
-              get :metrics
-              get :download
             end
           end
 

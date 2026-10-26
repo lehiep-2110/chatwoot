@@ -4,6 +4,8 @@ class Notification::PushNotificationService
   pattr_initialize [:notification!]
 
   def perform
+    return unless notification.delivery_supported?
+
     return unless user_subscribed_to_notification?
 
     notification_subscriptions.each do |subscription|

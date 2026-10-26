@@ -1,4 +1,6 @@
 class AutomationRules::ActionService < ActionService
+  RETIRED_ACTIONS = %w[add_sla add_private_note].freeze
+
   def initialize(rule, account, conversation)
     super(conversation)
     @rule = rule
@@ -8,6 +10,9 @@ class AutomationRules::ActionService < ActionService
 
   def perform
     @rule.actions.each do |action|
+      # Historical rules can contain this retired action alongside supported messaging actions.
+      next if RETIRED_ACTIONS.include?(action['action_name'])
+
       @conversation.reload
       action = action.with_indifferent_access
       begin
@@ -45,13 +50,6 @@ class AutomationRules::ActionService < ActionService
 
     params = { content: message[0], private: false, content_attributes: { automation_rule_id: @rule.id } }
     Messages::MessageBuilder.new(nil, @conversation, params).perform
-  end
-
-  def add_private_note(message)
-    return if conversation_a_tweet?
-
-    params = { content: message[0], private: true, content_attributes: { automation_rule_id: @rule.id } }
-    Messages::MessageBuilder.new(nil, @conversation.reload, params).perform
   end
 
   def send_email_to_team(params)

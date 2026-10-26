@@ -66,6 +66,7 @@ RUN apk update && apk add --no-cache build-base musl ruby-full ruby-dev gcc make
 RUN bundle config set --local force_ruby_platform true
 
 # Do not install development or test gems in production
+ARG GRPC_RUBY_BUILD_PROCS=2
 RUN if [ "$RAILS_ENV" = "production" ]; then \
   bundle config set without 'development test'; bundle install -j 4 -r 3; \
   else bundle install -j 4 -r 3; \
@@ -78,16 +79,21 @@ COPY . /app
 
 # creating a log directory so that image wont fail when RAILS_LOG_TO_STDOUT is false
 # https://github.com/chatwoot/chatwoot/issues/701
-RUN mkdir -p /app/log
+RUN mkdir -p /app/log \
+  && sed -i 's/\r$//' docker/entrypoints/*.sh docker/entrypoints/helpers/*.rb \
+  && chmod +x docker/entrypoints/*.sh docker/entrypoints/helpers/*.rb
 
 # generate production assets if production environment
 RUN if [ "$RAILS_ENV" = "production" ]; then \
   SECRET_KEY_BASE=precompile_placeholder RAILS_LOG_TO_STDOUT=enabled bundle exec rake assets:precompile \
+  && bundle exec ruby -rjson -e 'ARGV.each { |file| JSON.parse(File.read(file)) }' \
+    public/vite/.vite/manifest.json public/vite/.vite/manifest-assets.json \
   && rm -rf spec node_modules tmp/cache; \
   fi
 
-# Generate .git_sha file with current commit hash
-RUN git rev-parse HEAD > /app/.git_sha
+# Pass the source revision explicitly so source archives and worktrees build alike.
+ARG GIT_SHA
+RUN test -n "$GIT_SHA" && printf '%s\n' "$GIT_SHA" > /app/.git_sha
 
 # Remove unnecessary files
 RUN rm -rf /gems/ruby/3.4.0/cache/*.gem \
@@ -97,6 +103,9 @@ RUN rm -rf /gems/ruby/3.4.0/cache/*.gem \
 
 # final build stage
 FROM ruby:3.4.4-alpine3.21
+
+ARG GIT_SHA
+LABEL org.opencontainers.image.revision="$GIT_SHA"
 
 ARG NODE_VERSION="24.13.0"
 ARG PNPM_VERSION="10.2.0"

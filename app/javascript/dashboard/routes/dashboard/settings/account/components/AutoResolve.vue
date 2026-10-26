@@ -167,7 +167,6 @@ const toggleAutoResolve = async () => {
             class="w-full"
             channel-type="Context::NoToolbar"
             enable-variables
-            :enable-canned-responses="false"
             :show-character-count="false"
             :placeholder="
               t('GENERAL_SETTINGS.FORM.AUTO_RESOLVE.MESSAGE.PLACEHOLDER')

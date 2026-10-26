@@ -45,6 +45,21 @@ describe ActionCableListener do
     end
     let!(:event) { Events::Base.new(event_name, Time.zone.now, message: message) }
 
+    context 'when account membership is revoked before inbox cleanup' do
+      before { agent.account_users.find_by!(account: account).destroy! }
+
+      it 'excludes the removed agent from realtime delivery' do
+        expect(inbox.members).to include(agent)
+        expect(ActionCableBroadcastJob).to receive(:perform_later).with(
+          a_collection_containing_exactly(admin.pubsub_token, conversation.contact_inbox.pubsub_token),
+          'message.created',
+          message.push_event_data.merge(account_id: account.id)
+        )
+
+        listener.message_created(event)
+      end
+    end
+
     it 'sends message to account admins, inbox agents and the contact' do
       # HACK: to reload conversation inbox members
       expect(conversation.inbox.reload.inbox_members.count).to eq(1)
@@ -176,7 +191,7 @@ describe ActionCableListener do
 
   describe '#notification_deleted' do
     let(:event_name) { :'notification.deleted' }
-    let!(:notification) { create(:notification, account: account, user: agent) }
+    let!(:notification) { create(:notification, account: account, user: agent, primary_actor: conversation) }
     let(:notification_data) do
       {
         id: notification.id,
@@ -206,7 +221,7 @@ describe ActionCableListener do
 
   describe '#notification_updated' do
     let(:event_name) { :'notification.updated' }
-    let!(:notification) { create(:notification, account: account, user: agent) }
+    let!(:notification) { create(:notification, account: account, user: agent, primary_actor: conversation) }
     let!(:event) { Events::Base.new(event_name, Time.zone.now, notification: notification) }
 
     it 'sends notification to account admins, inbox agents' do
@@ -222,6 +237,22 @@ describe ActionCableListener do
       )
 
       listener.notification_updated(event)
+    end
+
+    context 'when inbox access is revoked' do
+      before { inbox.inbox_members.destroy_all }
+
+      it 'does not broadcast historical conversation content' do
+        expect(ActionCableBroadcastJob).not_to receive(:perform_later)
+
+        listener.notification_updated(event)
+      end
+
+      it 'does not deliver a queued creation event' do
+        expect(ActionCableBroadcastJob).not_to receive(:perform_later)
+
+        listener.notification_created(event)
+      end
     end
   end
 

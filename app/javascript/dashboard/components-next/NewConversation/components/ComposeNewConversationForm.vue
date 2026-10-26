@@ -2,10 +2,8 @@
 import { ref, computed } from 'vue';
 import { useVuelidate } from '@vuelidate/core';
 import { required, requiredIf } from '@vuelidate/validators';
-import { INBOX_TYPES, isVoiceCallEnabled } from 'dashboard/helper/inbox';
+import { INBOX_TYPES } from 'dashboard/helper/inbox';
 import {
-  appendSignature,
-  removeSignature,
   getEffectiveChannelType,
   stripUnsupportedMarkdown,
 } from 'dashboard/helper/editorHelper';
@@ -35,8 +33,6 @@ const props = defineProps({
   isDirectUploadsEnabled: { type: Boolean, default: false },
   contactConversationsUiFlags: { type: Object, default: null },
   contactsUiFlags: { type: Object, default: null },
-  messageSignature: { type: String, default: '' },
-  sendWithSignature: { type: Boolean, default: false },
   formState: { type: Object, required: true },
 });
 
@@ -91,14 +87,6 @@ const whatsappMessageTemplates = computed(() =>
 );
 
 const inboxChannelType = computed(() => props.targetInbox?.channelType || '');
-
-const inboxMedium = computed(() => props.targetInbox?.medium || '');
-
-const voiceCallEnabled = computed(() => isVoiceCallEnabled(props.targetInbox));
-
-const effectiveChannelType = computed(() =>
-  getEffectiveChannelType(inboxChannelType.value, inboxMedium.value)
-);
 
 const validationRules = computed(() => ({
   selectedContact: { required },
@@ -215,21 +203,8 @@ const handleInboxAction = ({ value, action, channelType, medium, ...rest }) => {
   state.attachedFiles = [];
 };
 
-const removeSignatureFromMessage = () => {
-  // Always remove the signature from message content when inbox/contact is removed
-  // to ensure no leftover signature content remains
-  if (props.messageSignature) {
-    state.message = removeSignature(
-      state.message,
-      props.messageSignature,
-      effectiveChannelType.value
-    );
-  }
-};
-
 const removeTargetInbox = value => {
   v$.value.$reset();
-  removeSignatureFromMessage();
 
   stripMessageFormatting(DEFAULT_FORMATTING);
 
@@ -238,7 +213,6 @@ const removeTargetInbox = value => {
 };
 
 const clearSelectedContact = () => {
-  removeSignatureFromMessage();
   emit('clearSelectedContact');
   state.message = '';
   state.attachedFiles = [];
@@ -246,22 +220,6 @@ const clearSelectedContact = () => {
 
 const onClickInsertEmoji = emoji => {
   state.message += emoji;
-};
-
-const handleAddSignature = signature => {
-  state.message = appendSignature(
-    state.message,
-    signature,
-    effectiveChannelType.value
-  );
-};
-
-const handleRemoveSignature = signature => {
-  state.message = removeSignature(
-    state.message,
-    signature,
-    effectiveChannelType.value
-  );
 };
 
 const handleAttachFile = files => {
@@ -385,8 +343,6 @@ const shouldShowMessageEditor = computed(() => {
       <MessageEditor
         v-if="shouldShowMessageEditor"
         v-model="state.message"
-        :message-signature="messageSignature"
-        :send-with-signature="sendWithSignature"
         :has-errors="validationStates.isMessageInvalid"
         :channel-type="inboxChannelType"
         :medium="targetInbox?.medium || ''"
@@ -406,18 +362,12 @@ const shouldShowMessageEditor = computed(() => {
       :is-twilio-sms-inbox="inboxTypes.isTwilioSMS"
       :is-twilio-whats-app-inbox="inboxTypes.isTwilioWhatsapp"
       :message-templates="whatsappMessageTemplates"
-      :channel-type="inboxChannelType"
-      :voice-enabled="voiceCallEnabled"
       :is-loading="isCreating"
       :disable-send-button="isCreating"
-      :has-selected-inbox="!!targetInbox"
       :inbox-id="targetInbox?.id"
       :has-no-inbox="showNoInboxAlert"
       :is-dropdown-active="isAnyDropdownActive"
-      :message-signature="messageSignature"
       @insert-emoji="onClickInsertEmoji"
-      @add-signature="handleAddSignature"
-      @remove-signature="handleRemoveSignature"
       @attach-file="handleAttachFile"
       @discard="$emit('discard')"
       @send-message="handleSendMessage"

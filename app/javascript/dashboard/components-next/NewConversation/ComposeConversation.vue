@@ -2,7 +2,6 @@
 import { reactive, ref, computed, onMounted, watch } from 'vue';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
 import { useI18n } from 'vue-i18n';
-import { useUISettings } from 'dashboard/composables/useUISettings';
 import { useAlert } from 'dashboard/composables';
 import { parseAPIErrorResponse } from 'dashboard/store/utils/api';
 import { ExceptionWithMessage } from 'shared/helpers/CustomErrors';
@@ -37,8 +36,6 @@ const searchContacts = createContactSearcher();
 const store = useStore();
 const { t } = useI18n();
 
-const { fetchSignatureFlagFromUISettings } = useUISettings();
-
 const popoverRef = ref(null);
 const contacts = ref([]);
 const selectedContact = ref(null);
@@ -69,12 +66,7 @@ const contactsUiFlags = useMapGetter('contacts/getUIFlags');
 const currentUser = useMapGetter('getCurrentUser');
 const globalConfig = useMapGetter('globalConfig/get');
 const uiFlags = useMapGetter('contactConversations/getUIFlags');
-const messageSignature = useMapGetter('getMessageSignature');
 const inboxesList = useMapGetter('inboxes/getInboxes');
-
-const sendWithSignature = computed(() =>
-  fetchSignatureFlagFromUISettings(targetInbox.value?.channelType)
-);
 
 const directUploadsEnabled = computed(
   () => globalConfig.value.directUploadsEnabled
@@ -265,8 +257,6 @@ onMounted(() => resetContacts());
         :is-direct-uploads-enabled="directUploadsEnabled"
         :contact-conversations-ui-flags="uiFlags"
         :contacts-ui-flags="contactsUiFlags"
-        :message-signature="messageSignature"
-        :send-with-signature="sendWithSignature"
         @search-contacts="onContactSearch"
         @reset-contact-search="resetContacts"
         @update-selected-contact="handleSelectedContact"

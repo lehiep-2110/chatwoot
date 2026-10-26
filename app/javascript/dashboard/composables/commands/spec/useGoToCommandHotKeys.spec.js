@@ -40,14 +40,6 @@ const ROUTE_META = {
     featureFlag: MOCK_FEATURE_FLAGS.LABELS,
     permissions: ['administrator'],
   },
-  canned_list: {
-    featureFlag: MOCK_FEATURE_FLAGS.CANNED_RESPONSES,
-    permissions: ['administrator', 'agent', 'conversation_manage'],
-  },
-  macros_wrapper: {
-    featureFlag: MOCK_FEATURE_FLAGS.MACROS,
-    permissions: ['administrator', 'agent', 'conversation_manage'],
-  },
   settings_applications: {
     featureFlag: MOCK_FEATURE_FLAGS.INTEGRATIONS,
     permissions: ['administrator'],
@@ -288,6 +280,7 @@ describe('useGoToCommandHotKeys', () => {
     const ids = goToCommandHotKeys.value.map(cmd => cmd.id);
     expect(ids).not.toContain('open_automation_settings');
     expect(ids).not.toContain('open_audit_logs_settings');
-    expect(ids).toContain('open_canned_response_settings');
+    expect(ids).not.toContain('open_canned_response_settings');
+    expect(ids).not.toContain('open_macro_settings');
   });
 });

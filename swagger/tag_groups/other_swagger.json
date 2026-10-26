@@ -80,35 +80,6 @@
           }
         }
       },
-      "canned_response": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "integer",
-            "description": "ID of the canned response"
-          },
-          "account_id": {
-            "type": "integer",
-            "description": "Account Id"
-          },
-          "short_code": {
-            "type": "string",
-            "description": "Short Code for quick access of the canned response"
-          },
-          "content": {
-            "type": "string",
-            "description": "Message content for canned response"
-          },
-          "created_at": {
-            "type": "string",
-            "description": "The date and time when the canned response was created"
-          },
-          "updated_at": {
-            "type": "string",
-            "description": "The date and time when the canned response was updated"
-          }
-        }
-      },
       "custom_attribute": {
         "type": "object",
         "properties": {
@@ -752,22 +723,8 @@
             "description": "The time at which the conversation was waiting"
           },
           "sla_policy_id": {
-            "type": [
-              "number",
-              "null"
-            ],
-            "description": "The ID of the SLA policy"
-          },
-          "applied_sla": {
-            "type": "object",
-            "description": "The applied SLA"
-          },
-          "sla_events": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "description": "SLA event objects"
-            }
+            "type": "null",
+            "description": "Legacy compatibility field; always null."
           }
         }
       },
@@ -2795,21 +2752,6 @@
             "type": "object",
             "description": "Custom attributes you want to associate with the user",
             "example": {}
-          }
-        }
-      },
-      "canned_response_create_update_payload": {
-        "type": "object",
-        "properties": {
-          "content": {
-            "type": "string",
-            "description": "Message content for canned response",
-            "example": "Hello, {{contact.name}}! Welcome to our service."
-          },
-          "short_code": {
-            "type": "string",
-            "description": "Short Code for quick access of the canned response",
-            "example": "welcome"
           }
         }
       },
@@ -7279,7 +7221,6 @@
         "Agents",
         "Audit Logs",
         "Campaigns",
-        "Canned Responses",
         "Contacts",
         "Contact Labels",
         "Conversation Assignments",

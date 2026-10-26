@@ -8,7 +8,7 @@ module CacheKeys
 
   included do
     class_attribute :cacheable_models
-    self.cacheable_models = [Label, Inbox, Team, CannedResponse]
+    self.cacheable_models = [Label, Inbox, Team]
   end
 
   def cache_keys

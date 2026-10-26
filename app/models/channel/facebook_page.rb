@@ -29,7 +29,9 @@ class Channel::FacebookPage < ApplicationRecord
 
   self.table_name = 'channel_facebook_pages'
 
-  validates :page_id, uniqueness: { scope: :account_id }
+  before_validation :lock_page_id, if: :will_save_change_to_page_id?
+  validates :page_id, presence: true, uniqueness: { scope: :account_id }
+  validate :ensure_exclusive_page
 
   after_create_commit :subscribe
   before_destroy :unsubscribe
@@ -64,5 +66,19 @@ class Channel::FacebookPage < ApplicationRecord
   rescue StandardError => e
     Rails.logger.debug { "Rescued: #{e.inspect}" }
     true
+  end
+
+  private
+
+  def ensure_exclusive_page
+    return unless self.class.where(page_id: page_id).where.not(account_id: account_id).exists?
+
+    errors.add(:page_id, :taken)
+  end
+
+  def lock_page_id
+    # Serialize Page ownership checks across accounts without changing the schema.
+    sql = self.class.sanitize_sql_array(['SELECT pg_advisory_xact_lock(hashtextextended(?, 0))', page_id])
+    self.class.connection.execute(sql)
   end
 end

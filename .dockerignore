@@ -1,4 +1,13 @@
 .bundle
+.git
+.codex
+.agents
+.claude
+.windsurf
+.cursor
+.vscode
+AGENTS.md
+CLAUDE.md
 .env
 .env.*
 docker-compose.*

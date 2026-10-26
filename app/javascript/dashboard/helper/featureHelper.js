@@ -3,7 +3,6 @@ const FEATURE_HELP_URLS = {
   agents: 'https://chwt.app/hc/agents',
   audit_logs: 'https://chwt.app/hc/audit-logs',
   campaigns: 'https://chwt.app/hc/campaigns',
-  canned_responses: 'https://chwt.app/hc/canned',
   channel_email: 'https://chwt.app/hc/email',
   channel_facebook: 'https://chwt.app/hc/fb',
   custom_attributes: 'https://chwt.app/hc/custom-attributes',
@@ -12,9 +11,7 @@ const FEATURE_HELP_URLS = {
   inboxes: 'https://chwt.app/hc/inboxes',
   integrations: 'https://chwt.app/hc/integrations',
   labels: 'https://chwt.app/hc/labels',
-  macros: 'https://chwt.app/hc/macros',
   reports: 'https://chwt.app/hc/reports',
-  sla: 'https://chwt.app/hc/sla',
   team_management: 'https://chwt.app/hc/teams',
   webhook: 'https://chwt.app/hc/webhooks',
   whatsapp_templates:

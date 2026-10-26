@@ -10,7 +10,6 @@ import auditlogs from './modules/auditlogs';
 import auth from './modules/auth';
 import automations from './modules/automations';
 import bulkActions from './modules/bulkActions';
-import cannedResponse from './modules/cannedResponse';
 import contactConversations from './modules/contactConversations';
 import contactLabels from './modules/contactLabels';
 import contactNotes from './modules/contactNotes';
@@ -24,7 +23,6 @@ import conversationStats from './modules/conversationStats';
 import conversationTypingStatus from './modules/conversationTypingStatus';
 import conversationUnreadCounts from './modules/conversationUnreadCounts';
 import conversationWatchers from './modules/conversationWatchers';
-import customRole from './modules/customRole';
 import customViews from './modules/customViews';
 import dashboardApps from './modules/dashboardApps';
 import draftMessages from './modules/draftMessages';
@@ -34,9 +32,7 @@ import inboxes from './modules/inboxes';
 import inboxMembers from './modules/inboxMembers';
 import integrations from './modules/integrations';
 import labels from './modules/labels';
-import macros from './modules/macros';
 import notifications from './modules/notifications';
-import sla from './modules/sla';
 import sidebarSortPreferences from './modules/sidebarSortPreferences';
 import teamMembers from './modules/teamMembers';
 import teams from './modules/teams';
@@ -58,7 +54,6 @@ export default createStore({
     auth,
     automations,
     bulkActions,
-    cannedResponse,
     contactConversations,
     contactLabels,
     contactNotes,
@@ -72,7 +67,6 @@ export default createStore({
     conversationTypingStatus,
     conversationUnreadCounts,
     conversationWatchers,
-    customRole,
     customViews,
     dashboardApps,
     draftMessages,
@@ -82,9 +76,7 @@ export default createStore({
     inboxMembers,
     integrations,
     labels,
-    macros,
     notifications,
-    sla,
     sidebarSortPreferences,
     teamMembers,
     teams,

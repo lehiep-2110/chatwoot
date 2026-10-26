@@ -49,7 +49,7 @@ const { t } = useI18n();
 
 const agentName = ref(props.name);
 const agentAvailability = ref(props.availability);
-const selectedRoleId = ref(props.customRoleId || props.type);
+const selectedRoleId = ref(props.type);
 const agentCredentials = ref({ email: props.email });
 
 const rules = {
@@ -69,10 +69,9 @@ const pageTitle = computed(
 );
 
 const uiFlags = useMapGetter('agents/getUIFlags');
-const getCustomRoles = useMapGetter('customRole/getCustomRoles');
 
 const roles = computed(() => {
-  const defaultRoles = [
+  return [
     {
       id: 'administrator',
       name: 'administrator',
@@ -84,22 +83,7 @@ const roles = computed(() => {
       label: t('AGENT_MGMT.AGENT_TYPES.AGENT'),
     },
   ];
-
-  const customRoles = getCustomRoles.value.map(role => ({
-    id: role.id,
-    name: `custom_${role.id}`,
-    label: role.name,
-  }));
-
-  return [...defaultRoles, ...customRoles];
 });
-
-const selectedRole = computed(() =>
-  roles.value.find(
-    role =>
-      role.id === selectedRoleId.value || role.name === selectedRoleId.value
-  )
-);
 
 const statusList = computed(() => {
   return [
@@ -128,11 +112,9 @@ const editAgent = async () => {
       availability: agentAvailability.value,
     };
 
-    if (selectedRole.value.name.startsWith('custom_')) {
-      payload.custom_role_id = selectedRole.value.id;
-    } else {
-      payload.role = selectedRole.value.name;
-      payload.custom_role_id = null;
+    // Preserve existing custom permissions when editing an agent's profile.
+    if (!props.customRoleId) {
+      payload.role = selectedRoleId.value;
     }
 
     await store.dispatch('agents/update', payload);
@@ -172,11 +154,18 @@ const resetPassword = async () => {
       <div class="w-full">
         <label :class="{ error: v$.selectedRoleId.$error }">
           {{ $t('AGENT_MGMT.EDIT.FORM.AGENT_TYPE.LABEL') }}
-          <select v-model="selectedRoleId" @change="v$.selectedRoleId.$touch">
+          <select
+            v-if="!customRoleId"
+            v-model="selectedRoleId"
+            @change="v$.selectedRoleId.$touch"
+          >
             <option v-for="role in roles" :key="role.id" :value="role.id">
               {{ role.label }}
             </option>
           </select>
+          <span v-if="customRoleId" class="text-body-main text-n-slate-11">
+            {{ $t('CUSTOM_ROLE.HEADER') }}
+          </span>
           <span v-if="v$.selectedRoleId.$error" class="message">
             {{ $t('AGENT_MGMT.EDIT.FORM.AGENT_TYPE.ERROR') }}
           </span>

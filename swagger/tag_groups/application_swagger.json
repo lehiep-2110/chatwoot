@@ -665,8 +665,8 @@
               }
             }
           },
-          "404": {
-            "description": "Agent not found",
+          "403": {
+            "description": "Access denied",
             "content": {
               "application/json": {
                 "schema": {
@@ -675,8 +675,8 @@
               }
             }
           },
-          "403": {
-            "description": "Access denied",
+          "404": {
+            "description": "Agent not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -714,231 +714,18 @@
           "200": {
             "description": "Success"
           },
-          "404": {
-            "description": "Agent not found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/bad_request_error"
-                }
-              }
-            }
-          },
           "403": {
             "description": "Access denied",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/bad_request_error"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/accounts/{account_id}/canned_responses": {
-      "parameters": [
-        {
-          "$ref": "#/components/parameters/account_id"
-        }
-      ],
-      "get": {
-        "tags": [
-          "Canned Responses"
-        ],
-        "operationId": "get-account-canned-response",
-        "summary": "List all Canned Responses in an Account",
-        "description": "Get Details of Canned Responses in an Account",
-        "security": [
-          {
-            "userApiKey": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "description": "Array of all canned responses",
-                  "items": {
-                    "$ref": "#/components/schemas/canned_response"
-                  }
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Access denied",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/bad_request_error"
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "tags": [
-          "Canned Responses"
-        ],
-        "operationId": "add-new-canned-response-to-account",
-        "summary": "Add a New Canned Response",
-        "description": "Add a new Canned Response to Account",
-        "security": [
-          {
-            "userApiKey": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/canned_response_create_update_payload"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/canned_response"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Access denied",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/bad_request_error"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/accounts/{account_id}/canned_responses/{id}": {
-      "parameters": [
-        {
-          "$ref": "#/components/parameters/account_id"
-        }
-      ],
-      "patch": {
-        "tags": [
-          "Canned Responses"
-        ],
-        "operationId": "update-canned-response-in-account",
-        "summary": "Update Canned Response in Account",
-        "description": "Update a Canned Response in Account",
-        "security": [
-          {
-            "userApiKey": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "schema": {
-              "type": "integer"
-            },
-            "required": true,
-            "description": "The ID of the canned response to be updated."
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/canned_response_create_update_payload"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/canned_response"
                 }
               }
             }
           },
           "404": {
             "description": "Agent not found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/bad_request_error"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Access denied",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/bad_request_error"
-                }
-              }
-            }
-          }
-        }
-      },
-      "delete": {
-        "tags": [
-          "Canned Responses"
-        ],
-        "operationId": "delete-canned-response-from-account",
-        "summary": "Remove a Canned Response from Account",
-        "description": "Remove a Canned Response from Account",
-        "security": [
-          {
-            "userApiKey": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "schema": {
-              "type": "integer"
-            },
-            "required": true,
-            "description": "The ID of the canned response to be deleted"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success"
-          },
-          "404": {
-            "description": "Canned Response not found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/bad_request_error"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Access denied",
             "content": {
               "application/json": {
                 "schema": {
@@ -1174,8 +961,8 @@
               }
             }
           },
-          "404": {
-            "description": "Agent not found",
+          "403": {
+            "description": "Access denied",
             "content": {
               "application/json": {
                 "schema": {
@@ -1184,8 +971,8 @@
               }
             }
           },
-          "403": {
-            "description": "Access denied",
+          "404": {
+            "description": "Agent not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -1226,8 +1013,8 @@
           "200": {
             "description": "Success"
           },
-          "404": {
-            "description": "Custom attribute not found",
+          "403": {
+            "description": "Access denied",
             "content": {
               "application/json": {
                 "schema": {
@@ -1236,8 +1023,8 @@
               }
             }
           },
-          "403": {
-            "description": "Access denied",
+          "404": {
+            "description": "Custom attribute not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -1385,8 +1172,8 @@
               }
             }
           },
-          "404": {
-            "description": "Contact not found",
+          "403": {
+            "description": "Access denied",
             "content": {
               "application/json": {
                 "schema": {
@@ -1395,8 +1182,8 @@
               }
             }
           },
-          "403": {
-            "description": "Access denied",
+          "404": {
+            "description": "Contact not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -1440,8 +1227,8 @@
               }
             }
           },
-          "404": {
-            "description": "Contact not found",
+          "403": {
+            "description": "Access denied",
             "content": {
               "application/json": {
                 "schema": {
@@ -1450,8 +1237,8 @@
               }
             }
           },
-          "403": {
-            "description": "Access denied",
+          "404": {
+            "description": "Contact not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -1550,8 +1337,8 @@
               }
             }
           },
-          "404": {
-            "description": "Contact not found",
+          "403": {
+            "description": "Access denied",
             "content": {
               "application/json": {
                 "schema": {
@@ -1560,8 +1347,8 @@
               }
             }
           },
-          "403": {
-            "description": "Access denied",
+          "404": {
+            "description": "Contact not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -3331,11 +3118,6 @@
                     ],
                     "description": "The priority of the conversation. Set to null to clear the priority.",
                     "example": "high"
-                  },
-                  "sla_policy_id": {
-                    "type": "number",
-                    "description": "The ID of the SLA policy (Available only in Enterprise edition)",
-                    "example": 1
                   }
                 }
               }
@@ -3485,8 +3267,8 @@
               }
             }
           },
-          "404": {
-            "description": "Conversation not found",
+          "401": {
+            "description": "Unauthorized",
             "content": {
               "application/json": {
                 "schema": {
@@ -3495,8 +3277,8 @@
               }
             }
           },
-          "401": {
-            "description": "Unauthorized",
+          "404": {
+            "description": "Conversation not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -3972,8 +3754,8 @@
               }
             }
           },
-          "404": {
-            "description": "Conversation not found",
+          "401": {
+            "description": "Unauthorized",
             "content": {
               "application/json": {
                 "schema": {
@@ -3982,8 +3764,8 @@
               }
             }
           },
-          "401": {
-            "description": "Unauthorized",
+          "404": {
+            "description": "Conversation not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -4043,8 +3825,8 @@
               }
             }
           },
-          "404": {
-            "description": "Conversation not found",
+          "401": {
+            "description": "Unauthorized",
             "content": {
               "application/json": {
                 "schema": {
@@ -4053,8 +3835,8 @@
               }
             }
           },
-          "401": {
-            "description": "Unauthorized",
+          "404": {
+            "description": "Conversation not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -4265,8 +4047,8 @@
               }
             }
           },
-          "404": {
-            "description": "Inbox not found",
+          "403": {
+            "description": "Access denied",
             "content": {
               "application/json": {
                 "schema": {
@@ -4275,8 +4057,8 @@
               }
             }
           },
-          "403": {
-            "description": "Access denied",
+          "404": {
+            "description": "Inbox not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -4466,8 +4248,8 @@
               }
             }
           },
-          "404": {
-            "description": "Inbox not found",
+          "403": {
+            "description": "Access denied",
             "content": {
               "application/json": {
                 "schema": {
@@ -4476,8 +4258,8 @@
               }
             }
           },
-          "403": {
-            "description": "Access denied",
+          "404": {
+            "description": "Inbox not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -4527,8 +4309,8 @@
               }
             }
           },
-          "404": {
-            "description": "Inbox not found",
+          "403": {
+            "description": "Access denied",
             "content": {
               "application/json": {
                 "schema": {
@@ -4537,8 +4319,8 @@
               }
             }
           },
-          "403": {
-            "description": "Access denied",
+          "404": {
+            "description": "Inbox not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -4730,8 +4512,8 @@
               }
             }
           },
-          "404": {
-            "description": "Inbox not found",
+          "403": {
+            "description": "Access denied",
             "content": {
               "application/json": {
                 "schema": {
@@ -4740,8 +4522,8 @@
               }
             }
           },
-          "403": {
-            "description": "Access denied",
+          "404": {
+            "description": "Inbox not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -4823,8 +4605,8 @@
               }
             }
           },
-          "404": {
-            "description": "Inbox not found",
+          "403": {
+            "description": "Access denied",
             "content": {
               "application/json": {
                 "schema": {
@@ -4833,8 +4615,8 @@
               }
             }
           },
-          "403": {
-            "description": "Access denied",
+          "404": {
+            "description": "Inbox not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -4894,8 +4676,8 @@
               }
             }
           },
-          "404": {
-            "description": "Inbox not found, Agent bot not found",
+          "403": {
+            "description": "Access denied",
             "content": {
               "application/json": {
                 "schema": {
@@ -4904,8 +4686,8 @@
               }
             }
           },
-          "403": {
-            "description": "Access denied",
+          "404": {
+            "description": "Inbox not found, Agent bot not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -4968,8 +4750,8 @@
           "204": {
             "description": "Success"
           },
-          "404": {
-            "description": "Inbox not found, Agent bot not found",
+          "403": {
+            "description": "Access denied",
             "content": {
               "application/json": {
                 "schema": {
@@ -4978,8 +4760,8 @@
               }
             }
           },
-          "403": {
-            "description": "Access denied",
+          "404": {
+            "description": "Inbox not found, Agent bot not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -5037,8 +4819,8 @@
               }
             }
           },
-          "404": {
-            "description": "Inbox not found",
+          "403": {
+            "description": "Access denied",
             "content": {
               "application/json": {
                 "schema": {
@@ -5047,8 +4829,8 @@
               }
             }
           },
-          "403": {
-            "description": "Access denied",
+          "404": {
+            "description": "Inbox not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -5129,8 +4911,8 @@
               }
             }
           },
-          "404": {
-            "description": "Inbox not found",
+          "403": {
+            "description": "Access denied",
             "content": {
               "application/json": {
                 "schema": {
@@ -5139,8 +4921,8 @@
               }
             }
           },
-          "403": {
-            "description": "Access denied",
+          "404": {
+            "description": "Inbox not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -5224,8 +5006,8 @@
               }
             }
           },
-          "404": {
-            "description": "Inbox not found",
+          "403": {
+            "description": "Access denied",
             "content": {
               "application/json": {
                 "schema": {
@@ -5234,8 +5016,8 @@
               }
             }
           },
-          "403": {
-            "description": "Access denied",
+          "404": {
+            "description": "Inbox not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -5299,8 +5081,8 @@
           "200": {
             "description": "Success"
           },
-          "404": {
-            "description": "Inbox not found",
+          "403": {
+            "description": "Access denied",
             "content": {
               "application/json": {
                 "schema": {
@@ -5309,8 +5091,8 @@
               }
             }
           },
-          "403": {
-            "description": "Access denied",
+          "404": {
+            "description": "Inbox not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -5665,8 +5447,8 @@
               }
             }
           },
-          "404": {
-            "description": "Conversation not found",
+          "401": {
+            "description": "Unauthorized",
             "content": {
               "application/json": {
                 "schema": {
@@ -5675,8 +5457,8 @@
               }
             }
           },
-          "401": {
-            "description": "Unauthorized",
+          "404": {
+            "description": "Conversation not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -5810,8 +5592,8 @@
               }
             }
           },
-          "404": {
-            "description": "Conversation not found",
+          "403": {
+            "description": "Access denied",
             "content": {
               "application/json": {
                 "schema": {
@@ -5820,8 +5602,8 @@
               }
             }
           },
-          "403": {
-            "description": "Access denied",
+          "404": {
+            "description": "Conversation not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -7486,8 +7268,8 @@
               }
             }
           },
-          "404": {
-            "description": "reports not found",
+          "403": {
+            "description": "Access denied",
             "content": {
               "application/json": {
                 "schema": {
@@ -7496,8 +7278,8 @@
               }
             }
           },
-          "403": {
-            "description": "Access denied",
+          "404": {
+            "description": "reports not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -7565,8 +7347,8 @@
               }
             }
           },
-          "404": {
-            "description": "reports not found",
+          "403": {
+            "description": "Access denied",
             "content": {
               "application/json": {
                 "schema": {
@@ -7575,8 +7357,8 @@
               }
             }
           },
-          "403": {
-            "description": "Access denied",
+          "404": {
+            "description": "reports not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -7641,8 +7423,8 @@
               }
             }
           },
-          "404": {
-            "description": "reports not found",
+          "403": {
+            "description": "Access denied",
             "content": {
               "application/json": {
                 "schema": {
@@ -7651,8 +7433,8 @@
               }
             }
           },
-          "403": {
-            "description": "Access denied",
+          "404": {
+            "description": "reports not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -7717,8 +7499,8 @@
               }
             }
           },
-          "404": {
-            "description": "reports not found",
+          "403": {
+            "description": "Access denied",
             "content": {
               "application/json": {
                 "schema": {
@@ -7727,8 +7509,8 @@
               }
             }
           },
-          "403": {
-            "description": "Access denied",
+          "404": {
+            "description": "reports not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -8519,35 +8301,6 @@
           }
         }
       },
-      "canned_response": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "integer",
-            "description": "ID of the canned response"
-          },
-          "account_id": {
-            "type": "integer",
-            "description": "Account Id"
-          },
-          "short_code": {
-            "type": "string",
-            "description": "Short Code for quick access of the canned response"
-          },
-          "content": {
-            "type": "string",
-            "description": "Message content for canned response"
-          },
-          "created_at": {
-            "type": "string",
-            "description": "The date and time when the canned response was created"
-          },
-          "updated_at": {
-            "type": "string",
-            "description": "The date and time when the canned response was updated"
-          }
-        }
-      },
       "custom_attribute": {
         "type": "object",
         "properties": {
@@ -9191,22 +8944,8 @@
             "description": "The time at which the conversation was waiting"
           },
           "sla_policy_id": {
-            "type": [
-              "number",
-              "null"
-            ],
-            "description": "The ID of the SLA policy"
-          },
-          "applied_sla": {
-            "type": "object",
-            "description": "The applied SLA"
-          },
-          "sla_events": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "description": "SLA event objects"
-            }
+            "type": "null",
+            "description": "Legacy compatibility field; always null."
           }
         }
       },
@@ -11234,21 +10973,6 @@
             "type": "object",
             "description": "Custom attributes you want to associate with the user",
             "example": {}
-          }
-        }
-      },
-      "canned_response_create_update_payload": {
-        "type": "object",
-        "properties": {
-          "content": {
-            "type": "string",
-            "description": "Message content for canned response",
-            "example": "Hello, {{contact.name}}! Welcome to our service."
-          },
-          "short_code": {
-            "type": "string",
-            "description": "Short Code for quick access of the canned response",
-            "example": "welcome"
           }
         }
       },
@@ -15708,10 +15432,6 @@
       "description": "Create, schedule, and manage campaigns. Requires an account administrator and API access enabled for the account."
     },
     {
-      "name": "Canned Responses",
-      "description": "Pre-defined responses for common queries"
-    },
-    {
       "name": "Contacts",
       "description": "Contact management APIs"
     },
@@ -15798,7 +15518,6 @@
         "Agents",
         "Audit Logs",
         "Campaigns",
-        "Canned Responses",
         "Contacts",
         "Contact Labels",
         "Conversation Assignments",

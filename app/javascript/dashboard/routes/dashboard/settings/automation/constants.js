@@ -791,18 +791,8 @@ export const AUTOMATION_ACTION_TYPES = [
     inputType: 'textarea',
   },
   {
-    key: 'add_private_note',
-    label: 'ADD_PRIVATE_NOTE',
-    inputType: 'textarea',
-  },
-  {
     key: 'change_priority',
     label: 'CHANGE_PRIORITY',
-    inputType: 'search_select',
-  },
-  {
-    key: 'add_sla',
-    label: 'ADD_SLA',
     inputType: 'search_select',
   },
 ];

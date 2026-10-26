@@ -1,6 +1,5 @@
 <script setup>
 // TODO This is a huge component, we should split this up into separate composables
-// like `useSignature`, `useImageHandling`, `useFileUpload`, `useSpecialContent``
 import {
   ref,
   unref,
@@ -11,11 +10,9 @@ import {
   nextTick,
 } from 'vue';
 
-import CannedResponse from '../conversation/CannedResponse.vue';
 import KeyboardEmojiSelector from './keyboardEmojiSelector.vue';
 import TagAgents from '../conversation/TagAgents.vue';
 import VariableList from '../conversation/VariableList.vue';
-import MacroList from '../conversation/MacroList.vue';
 
 import { useEmitter } from 'dashboard/composables/emitter';
 import { useI18n } from 'vue-i18n';
@@ -44,12 +41,10 @@ import {
 } from '@chatwoot/prosemirror-schema/src/mentions/plugin';
 
 import {
-  appendSignature,
   collapseSelection,
   findNodeToInsertImage,
   getContentNode,
   insertAtCursor,
-  removeSignature as removeSignatureHelper,
   scrollCursorIntoView,
   getFormattingForEditor,
   getSelectionCoords,
@@ -78,19 +73,13 @@ const props = defineProps({
   overrideLineBreaks: { type: Boolean, default: false },
   updateSelectionWith: { type: String, default: '' },
   enableVariables: { type: Boolean, default: false },
-  enableCannedResponses: { type: Boolean, default: true },
-  enableMacros: { type: Boolean, default: false },
   variables: { type: Object, default: () => ({}) },
-  signature: { type: String, default: '' },
-  // allowSignature is a kill switch, ensuring no signature methods
-  // are triggered except when this flag is true
-  allowSignature: { type: Boolean, default: false },
   channelType: { type: String, default: '' },
   medium: { type: String, default: '' },
   focusOnMount: { type: Boolean, default: true },
   // Global INSERT_INTO_RICH_EDITOR bus events are meant for the conversation
   // reply editor only — other mounted
-  // editors (canned responses, signature, etc.) must not consume them.
+  // other editors must not consume them.
   enableInsertEvents: { type: Boolean, default: false },
 });
 
@@ -98,10 +87,7 @@ const emit = defineEmits([
   'typingOn',
   'typingOff',
   'toggleUserMention',
-  'toggleCannedMenu',
   'toggleVariablesMenu',
-  'toggleMacrosMenu',
-  'executeMacro',
   'clearSelection',
   'blur',
   'focus',
@@ -115,7 +101,6 @@ const TYPING_INDICATOR_IDLE_TIME = 4000;
 const MAXIMUM_FILE_UPLOAD_SIZE = 4; // in MB
 const DEFAULT_FORMATTING = 'Context::Default';
 const PRIVATE_NOTE_FORMATTING = 'Context::PrivateNote';
-const MESSAGE_SIGNATURE_FORMATTING = 'Context::MessageSignature';
 const INLINE_IMAGE_PASTE_TYPES = [
   'image/png',
   'image/jpeg',
@@ -163,8 +148,7 @@ const createState = (content, placeholder, plugins = [], methods = {}) => {
   });
 };
 
-const { isEditorHotKeyEnabled, fetchSignatureFlagFromUISettings } =
-  useUISettings();
+const { isEditorHotKeyEnabled } = useUISettings();
 
 const typingIndicator = createTypingIndicator(
   () => emit('typingOn'),
@@ -180,15 +164,11 @@ let editorView = null;
 let state = null;
 
 const showUserMentions = ref(false);
-const showCannedMenu = ref(false);
 const showVariables = ref(false);
 const showEmojiMenu = ref(false);
-const showMacroMenu = ref(false);
 const mentionSearchKey = ref('');
-const cannedSearchKey = ref('');
 const variableSearchKey = ref('');
 const emojiSearchKey = ref('');
-const macroSearchKey = ref('');
 const range = ref(null);
 const isTextSelected = ref(false); // Tracks text selection and prevents unnecessary re-renders on mouse selection
 
@@ -221,16 +201,6 @@ const shouldShowVariables = computed(() => {
   return props.enableVariables && showVariables.value && !props.isPrivate;
 });
 
-const shouldShowCannedResponses = computed(() => {
-  return (
-    props.enableCannedResponses && showCannedMenu.value && !props.isPrivate
-  );
-});
-
-const shouldShowMacros = computed(() => {
-  return props.enableMacros && showMacroMenu.value;
-});
-
 const shouldShowUserMentions = computed(() => {
   return showUserMentions.value && props.isPrivate;
 });
@@ -244,10 +214,8 @@ const dismissPicker = showMenu => {
 };
 
 const dismissUserMentions = () => dismissPicker(showUserMentions);
-const dismissCannedResponses = () => dismissPicker(showCannedMenu);
 const dismissVariables = () => dismissPicker(showVariables);
 const dismissEmojiMenu = () => dismissPicker(showEmojiMenu);
-const dismissMacros = () => dismissPicker(showMacroMenu);
 
 // Deleting the trigger drops the suggestion, so the plugin closes the picker through
 // `onExit` on its own.
@@ -257,11 +225,6 @@ const removeSuggestionTrigger = () => {
   const end = Math.min(to, editorView.state.doc.content.size);
   editorView.dispatch(editorView.state.tr.delete(from, end));
   editorView.focus();
-};
-
-const onSelectMacro = macro => {
-  removeSuggestionTrigger();
-  emit('executeMacro', macro);
 };
 
 function createSuggestionPlugin({
@@ -308,12 +271,6 @@ const plugins = computed(() => {
       searchTerm: mentionSearchKey,
     }),
     createSuggestionPlugin({
-      trigger: '/',
-      showMenu: showCannedMenu,
-      searchTerm: cannedSearchKey,
-      isAllowed: () => !props.isPrivate,
-    }),
-    createSuggestionPlugin({
       trigger: '{{',
       showMenu: showVariables,
       searchTerm: variableSearchKey,
@@ -324,12 +281,6 @@ const plugins = computed(() => {
       getVariables: () => props.variables,
     }),
     createSuggestionPlugin({
-      trigger: '#',
-      showMenu: showMacroMenu,
-      searchTerm: macroSearchKey,
-      isAllowed: () => props.enableMacros,
-    }),
-    createSuggestionPlugin({
       trigger: ':',
       minChars: 2,
       showMenu: showEmojiMenu,
@@ -338,32 +289,11 @@ const plugins = computed(() => {
   ];
 });
 
-const sendWithSignature = computed(() => {
-  // this is considered the source of truth, we watch this property
-  // on change, we toggle the signature in the editor
-  if (
-    props.allowSignature &&
-    !props.isPrivate &&
-    props.channelType &&
-    !props.disabled
-  ) {
-    return fetchSignatureFlagFromUISettings(props.channelType);
-  }
-
-  return false;
-});
-
 watch(shouldShowUserMentions, updatedValue => {
   emit('toggleUserMention', updatedValue);
 });
-watch(shouldShowCannedResponses, updatedValue => {
-  emit('toggleCannedMenu', updatedValue);
-});
 watch(shouldShowVariables, updatedValue => {
   emit('toggleVariablesMenu', updatedValue);
-});
-watch(shouldShowMacros, updatedValue => {
-  emit('toggleMacrosMenu', updatedValue);
 });
 function focusEditorInputField(pos = 'end') {
   const { tr } = editorView.state;
@@ -375,62 +305,8 @@ function focusEditorInputField(pos = 'end') {
   editorView.focus();
 }
 
-function isBodyEmpty(content) {
-  // if content is undefined, we assume that the body is empty
-  if (!content) return true;
-
-  // Only strip the signature when it's actually being auto-appended for this
-  // draft. Otherwise an agent whose typed text happens to match their saved
-  // signature would be mistakenly treated as empty.
-  const bodyWithoutSignature =
-    sendWithSignature.value && props.signature
-      ? removeSignatureHelper(
-          content,
-          props.signature,
-          effectiveChannelType.value
-        )
-      : content;
-
-  // trimming should remove all the whitespaces, so we can check the length
-  return bodyWithoutSignature.trim().length === 0;
-}
-
-function handleEmptyBodyWithSignature() {
-  const { schema, tr, doc } = state;
-
-  const isEmptyParagraph = node =>
-    node && node.type === schema.nodes.paragraph && node.content.size === 0;
-
-  // Check if empty paragraph already exists to prevent duplicates when toggling signatures
-  if (isEmptyParagraph(doc.firstChild)) {
-    focusEditorInputField('start');
-    return;
-  }
-
-  // create a paragraph node and
-  // start a transaction to append it at the end
-  const paragraph = schema.nodes.paragraph.create();
-  const paragraphTransaction = tr.insert(0, paragraph);
-  editorView.dispatch(paragraphTransaction);
-
-  // Set the focus at the start of the input field
-  focusEditorInputField('start');
-}
-
-function focusEditor(content) {
-  if (props.disabled) return;
-
-  const unrefContent = unref(content);
-  if (isBodyEmpty(unrefContent) && sendWithSignature.value) {
-    // reload state can be called when switching between conversations, or when drafts is loaded
-    // these drafts can also have a signature, so we need to check if the body is empty
-    // and handle things accordingly
-    handleEmptyBodyWithSignature();
-  } else if (props.focusOnMount) {
-    // this is in the else block, handleEmptyBodyWithSignature also has a call to the focus method
-    // the position is set to start, because the signature is added at the end of the body
-    focusEditorInputField('end');
-  }
+function focusEditor() {
+  if (!props.disabled && props.focusOnMount) focusEditorInputField('end');
 }
 
 function openFileBrowser() {
@@ -440,10 +316,8 @@ function openFileBrowser() {
 function reloadState(content = props.modelValue) {
   range.value = null;
   showUserMentions.value = false;
-  showCannedMenu.value = false;
   showVariables.value = false;
   showEmojiMenu.value = false;
-  showMacroMenu.value = false;
 
   const unrefContent = unref(content);
   state = createState(
@@ -455,39 +329,7 @@ function reloadState(content = props.modelValue) {
   );
 
   editorView.updateState(state);
-  focusEditor(unrefContent);
-}
-
-function addSignature() {
-  if (props.disabled) return;
-  let content = props.modelValue;
-  // see if the content is empty, if it is before appending the signature
-  // we need to add a paragraph node and move the cursor at the start of the editor
-  const contentWasEmpty = isBodyEmpty(content);
-  content = appendSignature(
-    content,
-    props.signature,
-    effectiveChannelType.value
-  );
-  // need to reload first, ensuring that the editorView is updated
-  reloadState(content);
-
-  if (contentWasEmpty) {
-    handleEmptyBodyWithSignature();
-  }
-}
-
-function removeSignature() {
-  if (props.disabled) return;
-  if (!props.signature) return;
-  let content = props.modelValue;
-  content = removeSignatureHelper(
-    content,
-    props.signature,
-    effectiveChannelType.value
-  );
-  // reload the state, ensuring that the editorView is updated
-  reloadState(content);
+  focusEditor();
 }
 
 function setMenubarPosition({ selection } = {}) {
@@ -529,20 +371,6 @@ function emitOnChange() {
   emit('update:modelValue', contentFromEditor());
 }
 
-function toggleSignatureInEditor(signatureEnabled) {
-  // The toggleSignatureInEditor gets the new value from the
-  // watcher, this means that if the value is true, the signature
-  // is supposed to be added, else we remove it.
-  if (signatureEnabled) {
-    addSignature();
-  } else {
-    removeSignature();
-  }
-  // reloadState replaces editor state directly and bypasses dispatchTransaction,
-  // so v-model never hears about the signature change — sync it back explicitly.
-  emitOnChange();
-}
-
 function isEnterToSendEnabled() {
   return isEditorHotKeyEnabled('enter');
 }
@@ -570,17 +398,9 @@ async function uploadImageToStorage(file) {
     if (fileUrl) {
       onImageInsertInEditor(fileUrl);
     }
-    useAlert(
-      props.channelType === MESSAGE_SIGNATURE_FORMATTING
-        ? t(
-            'PROFILE_SETTINGS.FORM.MESSAGE_SIGNATURE_SECTION.IMAGE_UPLOAD_SUCCESS'
-          )
-        : t('CONVERSATION.REPLYBOX.IMAGE_UPLOAD_SUCCESS')
-    );
+    useAlert(t('CONVERSATION.REPLYBOX.IMAGE_UPLOAD_SUCCESS'));
   } catch (error) {
-    useAlert(
-      t('PROFILE_SETTINGS.FORM.MESSAGE_SIGNATURE_SECTION.IMAGE_UPLOAD_ERROR')
-    );
+    useAlert(t('CONVERSATION.REPLYBOX.IMAGE_UPLOAD_ERROR'));
   }
 }
 
@@ -639,10 +459,6 @@ async function pasteInlineImageFromClipboard() {
 }
 
 useKeyboardEvents({
-  'Alt+KeyP': {
-    action: focusEditorInputField,
-    allowOnFocusedInput: false,
-  },
   'Alt+KeyL': {
     action: focusEditorInputField,
     allowOnFocusedInput: false,
@@ -685,8 +501,8 @@ function insertContentIntoEditor(content, defaultFrom = 0) {
 }
 
 /**
- * Inserts special content (mention, canned response, variable, emoji) into the editor.
- * @param {string} type - The type of special content to insert. Possible values: 'mention', 'canned_response', 'variable', 'emoji'.
+ * Inserts special content (mention, variable, emoji) into the editor.
+ * @param {string} type - The type of special content to insert. Possible values: 'mention', 'variable', 'emoji'.
  * @param {Object|string} content - The content to insert, depending on the type.
  */
 function insertSpecialContent(type, content) {
@@ -708,7 +524,6 @@ function insertSpecialContent(type, content) {
 
   const event_map = {
     mention: CONVERSATION_EVENTS.USED_MENTIONS,
-    cannedResponse: CONVERSATION_EVENTS.INSERTED_A_CANNED_RESPONSE,
     variable: CONVERSATION_EVENTS.INSERTED_A_VARIABLE,
     emoji: CONVERSATION_EVENTS.INSERTED_AN_EMOJI,
   };
@@ -838,13 +653,6 @@ watch(
   }
 );
 
-watch(sendWithSignature, newValue => {
-  // see if the allowSignature flag is true
-  if (props.allowSignature && !props.disabled) {
-    toggleSignatureInEditor(newValue);
-  }
-});
-
 onMounted(() => {
   // [VITE] state assignment was done in created before
   state = createState(
@@ -890,16 +698,6 @@ useEmitter(BUS_EVENTS.INSERT_INTO_RICH_EDITOR, content => {
       @remove-trigger="removeSuggestionTrigger"
       @select-agent="content => insertSpecialContent('mention', content)"
     />
-    <CannedResponse
-      v-if="shouldShowCannedResponses"
-      :caret-position="caretPosition"
-      :search-key="cannedSearchKey"
-      :variables="variables"
-      :schema="editorSchema"
-      @close="dismissCannedResponses"
-      @remove-trigger="removeSuggestionTrigger"
-      @replace="content => insertSpecialContent('cannedResponse', content)"
-    />
     <VariableList
       v-if="shouldShowVariables"
       :caret-position="caretPosition"
@@ -908,14 +706,6 @@ useEmitter(BUS_EVENTS.INSERT_INTO_RICH_EDITOR, content => {
       @close="dismissVariables"
       @remove-trigger="removeSuggestionTrigger"
       @select-variable="content => insertSpecialContent('variable', content)"
-    />
-    <MacroList
-      v-if="shouldShowMacros"
-      :caret-position="caretPosition"
-      :search-key="macroSearchKey"
-      @close="dismissMacros"
-      @remove-trigger="removeSuggestionTrigger"
-      @select-macro="onSelectMacro"
     />
     <KeyboardEmojiSelector
       v-if="showEmojiMenu"

@@ -142,11 +142,6 @@ export const FORMATTING = {
       'redo',
     ],
   },
-  'Context::MessageSignature': {
-    marks: ['strong', 'em', 'link'],
-    nodes: ['image'],
-    menu: ['strong', 'em', 'link', 'undo', 'redo', 'imageUpload'],
-  },
   'Context::InboxSettings': {
     marks: ['strong', 'em', 'link'],
     nodes: [],
@@ -163,26 +158,6 @@ export const FORMATTING = {
     menu: [],
   },
 };
-
-// Editor menu options for Full Editor
-export const ARTICLE_EDITOR_MENU_OPTIONS = [
-  'strong',
-  'em',
-  'strike',
-  'link',
-  'undo',
-  'redo',
-  'bulletList',
-  'orderedList',
-  'h1',
-  'h2',
-  'h3',
-  'imageUpload',
-  'code',
-  'insertTable',
-  'video',
-  'horizontalRule',
-];
 
 // A markdown table cell holds inline content only; anything else is lost on save.
 export const MENU_OPTIONS_UNAVAILABLE_IN_TABLE = [

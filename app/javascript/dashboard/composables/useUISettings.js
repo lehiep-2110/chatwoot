@@ -4,7 +4,6 @@ import wootConstants from 'dashboard/constants/globals';
 
 export const DEFAULT_CONVERSATION_SIDEBAR_ITEMS_ORDER = Object.freeze([
   { name: 'conversation_actions' },
-  { name: 'macros' },
   { name: 'conversation_info' },
   { name: 'contact_attributes' },
   { name: 'contact_notes' },
@@ -43,7 +42,7 @@ const useConversationSidebarItemsOrder = uiSettings => {
       return [...DEFAULT_CONVERSATION_SIDEBAR_ITEMS_ORDER];
     }
     // Create a copy of itemsOrder to avoid mutating the original store object.
-    const itemsOrderCopy = [...itemsOrder];
+    const itemsOrderCopy = itemsOrder.filter(item => item.name !== 'macros');
     // If the sidebar order doesn't have the new elements, then add them to the list.
     DEFAULT_CONVERSATION_SIDEBAR_ITEMS_ORDER.forEach(item => {
       if (!itemsOrderCopy.find(i => i.name === item.name)) {
@@ -76,37 +75,11 @@ const toggleSidebarUIState = (key, uiSettings, updateUISettings) => {
   updateUISettings({ [key]: !uiSettings.value[key] });
 };
 
-/**
- * Sets the signature flag for a specific channel type in the inbox settings.
- * @param {string} channelType - The type of the channel.
- * @param {boolean} value - The value to set for the signature enabled flag.
- * @param {Function} updateUISettings - Function to update UI settings.
- */
-const setSignatureFlagForInbox = (channelType, value, updateUISettings) => {
-  if (!channelType) return;
-
-  const slugifiedChannel = slugifyChannel(channelType);
-  updateUISettings({ [`${slugifiedChannel}_signature_enabled`]: value });
-};
-
 const setQuotedReplyFlagForInbox = (channelType, value, updateUISettings) => {
   if (!channelType) return;
 
   const slugifiedChannel = slugifyChannel(channelType);
   updateUISettings({ [`${slugifiedChannel}_quoted_reply_enabled`]: value });
-};
-
-/**
- * Fetches the signature flag for a specific channel type from UI settings.
- * @param {string} channelType - The type of the channel.
- * @param {Object} uiSettings - Reactive UI settings object.
- * @returns {boolean} The value of the signature enabled flag.
- */
-const fetchSignatureFlagFromUISettings = (channelType, uiSettings) => {
-  if (!channelType) return false;
-
-  const slugifiedChannel = slugifyChannel(channelType);
-  return uiSettings.value[`${slugifiedChannel}_signature_enabled`];
 };
 
 const fetchQuotedReplyFlagFromUISettings = (channelType, uiSettings) => {
@@ -169,10 +142,6 @@ export function useUISettings() {
     isContactSidebarItemOpen: key => !!uiSettings.value[key],
     toggleSidebarUIState: key =>
       toggleSidebarUIState(key, uiSettings, updateUISettings),
-    setSignatureFlagForInbox: (channelType, value) =>
-      setSignatureFlagForInbox(channelType, value, updateUISettings),
-    fetchSignatureFlagFromUISettings: channelType =>
-      fetchSignatureFlagFromUISettings(channelType, uiSettings),
     setQuotedReplyFlagForInbox: (channelType, value) =>
       setQuotedReplyFlagForInbox(channelType, value, updateUISettings),
     fetchQuotedReplyFlagFromUISettings: channelType =>

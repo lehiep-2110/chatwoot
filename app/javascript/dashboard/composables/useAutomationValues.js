@@ -25,7 +25,6 @@ export default function useAutomationValues() {
   const inboxes = useMapGetter('inboxes/getInboxes');
   const labels = useMapGetter('labels/getLabels');
   const teams = useMapGetter('teams/getTeams');
-  const slaPolicies = useMapGetter('sla/getSLA');
 
   const booleanFilterOptions = computed(() => [
     { id: true, name: t('FILTER.ATTRIBUTE_LABELS.TRUE') },
@@ -131,7 +130,6 @@ export default function useAutomationValues() {
       agents: agentsList,
       labels: labels.value,
       teams: teams.value,
-      slaPolicies: slaPolicies.value,
       languages,
       type,
       addNoneToListFn: addNoneToList,
@@ -152,6 +150,5 @@ export default function useAutomationValues() {
     inboxes,
     labels,
     teams,
-    slaPolicies,
   };
 }

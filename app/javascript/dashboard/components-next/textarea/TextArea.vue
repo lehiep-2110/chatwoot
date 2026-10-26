@@ -1,11 +1,5 @@
 <script setup>
 import { computed, ref, onMounted, nextTick, watch } from 'vue';
-import {
-  appendSignature,
-  removeSignature,
-  extractTextFromMarkdown,
-} from 'dashboard/helper/editorHelper';
-
 const props = defineProps({
   modelValue: { type: String, default: '' },
   label: { type: String, default: '' },
@@ -27,9 +21,6 @@ const props = defineProps({
     default: 'info',
     validator: value => ['info', 'error', 'success'].includes(value),
   },
-  signature: { type: String, default: '' },
-  sendWithSignature: { type: Boolean, default: false }, // add this as a prop, so that we won't have to add useUISettings
-  allowSignature: { type: Boolean, default: false }, // allowSignature is a kill switch, ensuring no signature methods are triggered except when this flag is true
 });
 
 const emit = defineEmits(['update:modelValue', 'blur', 'focus']);
@@ -38,10 +29,6 @@ const textareaRef = ref(null);
 const isFocused = ref(false);
 
 const characterCount = computed(() => props.modelValue.length);
-const cleanedSignature = computed(() =>
-  extractTextFromMarkdown(props.signature)
-);
-
 const messageClass = computed(() => {
   switch (props.messageType) {
     case 'error':
@@ -61,32 +48,6 @@ const adjustHeight = () => {
   textareaRef.value.style.height = 'auto';
   // Set the height to the scrollHeight
   textareaRef.value.style.height = `${textareaRef.value.scrollHeight}px`;
-};
-
-const setCursor = () => {
-  if (!textareaRef.value) return;
-
-  const bodyWithoutSignature = removeSignature(
-    props.modelValue,
-    cleanedSignature.value
-  );
-  const bodyEndsAt = bodyWithoutSignature.trimEnd().length;
-
-  textareaRef.value.focus();
-  textareaRef.value.setSelectionRange(bodyEndsAt, bodyEndsAt);
-};
-
-const toggleSignatureInEditor = signatureEnabled => {
-  if (!props.allowSignature) return;
-  const valueWithSignature = signatureEnabled
-    ? appendSignature(props.modelValue, cleanedSignature.value)
-    : removeSignature(props.modelValue, cleanedSignature.value);
-  emit('update:modelValue', valueWithSignature);
-
-  nextTick(() => {
-    adjustHeight();
-    setCursor();
-  });
 };
 
 const handleInput = event => {
@@ -117,13 +78,6 @@ watch(
     if (props.autoHeight) {
       nextTick(adjustHeight);
     }
-  }
-);
-
-watch(
-  () => props.sendWithSignature,
-  newValue => {
-    if (props.allowSignature) toggleSignatureInEditor(newValue);
   }
 );
 

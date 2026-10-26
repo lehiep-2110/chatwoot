@@ -61,14 +61,6 @@ const greetingMessage = computed(() => {
       :link-text="$t('ONBOARDING.TEAM_MEMBERS.NEW_LINK')"
     />
     <OnboardingFeatureCard
-      image-src="/dashboard/images/onboarding/canned-responses.png"
-      image-alt="Canned responses"
-      to="canned_list"
-      :title="$t('ONBOARDING.CANNED_RESPONSES.TITLE')"
-      :description="$t('ONBOARDING.CANNED_RESPONSES.DESCRIPTION')"
-      :link-text="$t('ONBOARDING.CANNED_RESPONSES.NEW_LINK')"
-    />
-    <OnboardingFeatureCard
       image-src="/dashboard/images/onboarding/labels.png"
       image-alt="Labels"
       to="labels_list"

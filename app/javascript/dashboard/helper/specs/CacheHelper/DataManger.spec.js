@@ -32,12 +32,12 @@ describe('DataManager', () => {
       expect(db1).toBe(db2);
     });
 
-    it('should add new stores and invalidate stale inbox data from an earlier version', async () => {
+    it('should preserve supported stores and invalidate stale inbox data from an earlier version', async () => {
       const legacyAccountId = 'legacy-account';
       const dbName = `cw-store-${legacyAccountId}`;
       await deleteDB(dbName);
 
-      // The schema as it shipped before canned responses joined the cached models
+      // The schema as it shipped before Inbox cache invalidation
       const legacyDb = await openDB(dbName, 1, {
         upgrade(db) {
           db.createObjectStore('cache-keys');
@@ -55,9 +55,12 @@ describe('DataManager', () => {
       const legacyManager = new DataManager(legacyAccountId);
       await legacyManager.initDb();
 
-      expect([...legacyManager.db.objectStoreNames]).toContain(
-        'canned_response'
-      );
+      expect([...legacyManager.db.objectStoreNames]).toEqual([
+        'cache-keys',
+        'inbox',
+        'label',
+        'team',
+      ]);
       expect(await legacyManager.get({ modelName: 'inbox' })).toEqual([]);
       expect(await legacyManager.getCacheKey('inbox')).toBeUndefined();
       expect(await legacyManager.get({ modelName: 'label' })).toEqual([

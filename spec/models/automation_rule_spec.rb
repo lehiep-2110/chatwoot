@@ -55,6 +55,13 @@ RSpec.describe AutomationRule do
       }.with_indifferent_access
     end
 
+    it 'rejects new private-note actions' do
+      params[:actions] = [{ action_name: 'add_private_note', action_params: ['Confidential note'] }]
+      rule = FactoryBot.build(:automation_rule, params)
+      expect(rule).not_to be_valid
+      expect(rule.errors[:actions]).to include('Automation actions add_private_note not supported.')
+    end
+
     it 'returns valid record' do
       rule = FactoryBot.build(:automation_rule, params)
       expect(rule.valid?).to be true

@@ -69,12 +69,6 @@ export const SHORTCUT_KEYS = [
     keySet: ['Alt+KeyS'],
   },
   {
-    id: 12,
-    label: 'SWITCH_TO_PRIVATE_NOTE',
-    displayKeys: [KEYS.ALT, 'P'],
-    keySet: ['Alt+KeyP'],
-  },
-  {
     id: 13,
     label: 'SWITCH_TO_REPLY',
     displayKeys: [KEYS.ALT, 'L'],

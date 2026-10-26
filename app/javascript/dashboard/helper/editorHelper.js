@@ -1,57 +1,7 @@
-import {
-  InputRule,
-  inputRules,
-  MessageMarkdownSerializer,
-  MessageMarkdownTransformer,
-  messageSchema,
-  Selection,
-} from '@chatwoot/prosemirror-schema';
-import * as Sentry from '@sentry/vue';
+import { InputRule, inputRules, Selection } from '@chatwoot/prosemirror-schema';
 import camelcaseKeys from 'camelcase-keys';
 import { FORMATTING, MARKDOWN_PATTERNS } from 'dashboard/constants/editor';
 import { INBOX_TYPES, TWILIO_CHANNEL_MEDIUM } from 'dashboard/helper/inbox';
-
-/**
- * Extract text from markdown, and remove all images, code blocks, links, headers, bold, italic, lists etc.
- * Links will be converted to text, and not removed.
- *
- * @param {string} markdown - markdown text to be extracted
- * @returns {string} - The extracted text.
- */
-export function extractTextFromMarkdown(markdown) {
-  if (!markdown) return '';
-  return markdown
-    .replace(/```[\s\S]*?```/g, '') // Remove code blocks
-    .replace(/`.*?`/g, '') // Remove inline code
-    .replace(/!\[.*?\]\(.*?\)/g, '') // Remove images before removing links
-    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // Remove links but keep the text
-    .replace(/#+\s*|[*_-]{1,3}/g, '') // Remove headers, bold, italic, lists etc.
-    .split('\n')
-    .map(line => line.trim())
-    .filter(Boolean)
-    .join('\n') // Trim each line & remove any lines only having spaces
-    .replace(/\n{2,}/g, '\n') // Remove multiple consecutive newlines (blank lines)
-    .trim(); // Trim any extra space
-}
-
-/**
- * Removes inline base64 markdown images from signature content.
- *
- * @param {string} content
- * @returns {{ sanitizedContent: string, hasInlineImages: boolean }}
- */
-export function stripInlineBase64Images(content) {
-  if (!content || typeof content !== 'string') {
-    return { sanitizedContent: content || '', hasInlineImages: false };
-  }
-
-  const markdownInlineBase64ImageRegex =
-    /!\[[^\]]*]\(\s*data:image\/[a-zA-Z0-9.+-]+;base64,[^)]+\s*\)/gi;
-  const sanitizedContent = content.replace(markdownInlineBase64ImageRegex, '');
-  const hasInlineImages = sanitizedContent !== content;
-
-  return { sanitizedContent, hasInlineImages };
-}
 
 /**
  * Strip unsupported markdown formatting based on channel capabilities.
@@ -94,86 +44,6 @@ export function stripUnsupportedMarkdown(
 }
 
 /**
- * The delimiter used to separate the signature from the rest of the body.
- * @type {string}
- */
-export const SIGNATURE_DELIMITER = '--';
-
-/**
- * Parse and Serialize the markdown text to remove any extra spaces or new lines
- */
-export function cleanSignature(signature) {
-  try {
-    // remove any horizontal rule tokens
-    signature = signature
-      .replace(/^( *\* *){3,} *$/gm, '')
-      .replace(/^( *- *){3,} *$/gm, '')
-      .replace(/^( *_ *){3,} *$/gm, '');
-
-    const nodes = new MessageMarkdownTransformer(messageSchema).parse(
-      signature
-    );
-    return MessageMarkdownSerializer.serialize(nodes);
-  } catch (e) {
-    // eslint-disable-next-line no-console
-    console.warn(e);
-    Sentry.captureException(e);
-    // The parser can break on some cases
-    // for example, Token type `hr` not supported by Markdown parser
-    return signature;
-  }
-}
-
-// Strip `\<newline>` hardbreak markers trailing `--` after a signature slice
-const stripDelimiterHardbreaks = body =>
-  body.replace(/(--)\s*(?:\\\s*)+$/, '$1');
-
-// Strip standalone blank-paragraph markers (`\` on their own lines), plus
-// the bare `\` the serializer writes to escape the `--` delimiter into `\--`
-// (left behind once the delimiter itself is sliced off). Two shapes end in that
-// escape after the slice: `hey\` LF `\` (Shift+Enter, the trailing `\` on the
-// content line is a hard-break marker and goes too) and `C:\` LF LF `\` LF `\`
-// (a blank line separates content from the glue; the serializer emits authored
-// backslashes verbatim, so a `\` before a blank line is user content and must
-// stay). A marker's newline is never blank, so the marker alternative only
-// crosses single newlines ([^\S\n] excludes `\n`) while the plain alternative
-// starts at the newline and may cross blank lines.
-const stripTrailingBlankLine = body =>
-  body
-    .replace(/(?:\\\n(?:[^\S\n]*\\\n)*[^\S\n]*\\|\n(?:\s*\\\n)*\s*\\)$/, '')
-    .replace(/\n(?:\s*\\\n)+$/, '');
-
-/**
- * Adds the signature delimiter to the beginning of the signature.
- *
- * @param {string} signature - The signature to add the delimiter to.
- * @returns {string} - The signature with the delimiter added.
- */
-function appendDelimiter(signature) {
-  return `${SIGNATURE_DELIMITER}\n\n${cleanSignature(signature)}`;
-}
-
-/**
- * Check if there's an unedited signature at the end of the body
- * If there is, return the index of the signature, If there isn't, return -1
- *
- * @param {string} body - The body to search for the signature.
- * @param {string} signature - The signature to search for.
- * @returns {number} - The index of the last occurrence of the signature in the body, or -1 if not found.
- */
-export function findSignatureInBody(body, signature) {
-  const trimmedBody = body.trimEnd();
-  const cleanedSignature = cleanSignature(signature);
-
-  // check if body ends with signature
-  if (trimmedBody.endsWith(cleanedSignature)) {
-    return body.lastIndexOf(cleanedSignature);
-  }
-
-  return -1;
-}
-
-/**
  * Gets the effective channel type for formatting purposes.
  * For Twilio channels, returns WhatsApp or Twilio based on medium.
  *
@@ -188,96 +58,6 @@ export function getEffectiveChannelType(channelType, medium) {
       : INBOX_TYPES.TWILIO;
   }
   return channelType;
-}
-
-/**
- * Appends the signature to the body, separated by the signature delimiter.
- * Automatically strips unsupported formatting based on channel capabilities.
- *
- * @param {string} body - The body to append the signature to.
- * @param {string} signature - The signature to append.
- * @param {string} channelType - Optional. The effective channel type to determine supported formatting.
- *                               For Twilio channels, pass the result of getEffectiveChannelType().
- * @returns {string} - The body with the signature appended.
- */
-export function appendSignature(body, signature, channelType) {
-  // Strip only unsupported formatting based on channel capabilities
-  const preparedSignature = channelType
-    ? stripUnsupportedMarkdown(signature, channelType)
-    : signature;
-  const cleanedSignature = cleanSignature(preparedSignature);
-  // if signature is already present, return body
-  if (findSignatureInBody(body, cleanedSignature) > -1) {
-    return body;
-  }
-
-  return `${body.trimEnd()}\n\n${appendDelimiter(cleanedSignature)}`;
-}
-
-/**
- * Removes the signature from the body, along with the signature delimiter.
- * Tries multiple signature variants: original, channel-stripped, and fully stripped.
- *
- * @param {string} body - The body to remove the signature from.
- * @param {string} signature - The signature to remove.
- * @param {string} channelType - Optional. The effective channel type for channel-specific stripping.
- * @returns {string} - The body with the signature removed.
- */
-export function removeSignature(body, signature, channelType) {
-  // Build unique list of signature variants to try
-  const channelStripped = channelType
-    ? cleanSignature(stripUnsupportedMarkdown(signature, channelType))
-    : null;
-  const signaturesToTry = [
-    cleanSignature(signature),
-    channelStripped,
-    cleanSignature(extractTextFromMarkdown(signature)),
-  ].filter((sig, i, arr) => sig && arr.indexOf(sig) === i); // Remove nulls and duplicates
-
-  // Find the first matching signature
-  const signatureIndex = signaturesToTry.reduce(
-    (index, sig) => (index === -1 ? findSignatureInBody(body, sig) : index),
-    -1
-  );
-
-  // no need to trim the ends here, because it will simply be removed in the next method
-  let newBody = body;
-
-  // if signature is present, remove it and trim it
-  // trimming will ensure any spaces or new lines before the signature are removed
-  // This means we will have the delimiter at the end
-  if (signatureIndex > -1) {
-    newBody = stripDelimiterHardbreaks(
-      newBody.substring(0, signatureIndex)
-    ).trimEnd();
-  }
-
-  // Remove delimiter if it's at the end
-  if (newBody.endsWith(SIGNATURE_DELIMITER)) {
-    // if the delimiter is at the end, remove it
-    newBody = newBody.slice(0, -SIGNATURE_DELIMITER.length);
-    // strip any trailing blank-line markers
-    if (signatureIndex > -1) {
-      newBody = stripTrailingBlankLine(newBody);
-    }
-  }
-
-  return newBody;
-}
-
-/**
- * Replaces the old signature with the new signature.
- * If the old signature is not present, it will append the new signature.
- *
- * @param {string} body - The body to replace the signature in.
- * @param {string} oldSignature - The signature to replace.
- * @param {string} newSignature - The signature to replace the old signature with.
- * @returns {string} - The body with the old signature replaced with the new signature.
- *
- */
-export function replaceSignature(body, oldSignature, newSignature) {
-  const withoutSignature = removeSignature(body, oldSignature);
-  return appendSignature(withoutSignature, newSignature);
 }
 
 /**
@@ -404,7 +184,7 @@ export const findNodeToInsertImage = (editorState, fileUrl) => {
 
 /**
  * Strips unsupported markdown formatting from content based on the editor schema.
- * This ensures canned responses with rich formatting can be inserted into channels
+ * This ensures rich formatting can be inserted into channels
  * that don't support certain formatting (e.g., API channels don't support bold).
  *
  * @param {string} content - The markdown content to sanitize
@@ -446,7 +226,6 @@ export function stripUnsupportedFormatting(content, schema) {
 /**
  * Content Node Creation Helper Functions for
  * - mention
- * - canned response
  * - variable
  * - emoji
  */
@@ -454,18 +233,11 @@ export function stripUnsupportedFormatting(content, schema) {
 // Liquid delimiters ({{ }} / {% %}) the backend evaluates on send.
 const LIQUID_SYNTAX = /\{\{|\{%/;
 
-const VARIABLE_PLACEHOLDER = /{{(.*?)}}/g;
-
 // Value when set (and not itself Liquid), else the {{placeholder}} for the backend.
 export const resolveVariableText = (key, variables) => {
   const value = String(variables?.[key] ?? '');
   return value && !LIQUID_SYNTAX.test(value) ? value : `{{${key}}}`;
 };
-
-export const resolveVariablesInMessage = (message, variables) =>
-  message?.replace(VARIABLE_PLACEHOLDER, (_, key) =>
-    resolveVariableText(key.trim(), variables)
-  );
 
 // Name variables normalized like the backend drops (UserDrop/ContactDrop):
 // name split on whitespace, each word Ruby-capitalized (rest downcased).
@@ -510,7 +282,7 @@ export const createVariableInputRule = ({ isPrivate, getVariables }) => {
 /**
  * Centralized node creation function that handles the creation of different types of nodes based on the specified type.
  * @param {Object} editorView - The editor view instance.
- * @param {string} nodeType - The type of node to create ('mention', 'cannedResponse', 'variable', 'emoji').
+ * @param {string} nodeType - The type of node to create ('mention', 'variable', 'emoji').
  * @param {Object|string} content - The content needed to create the node, which varies based on node type.
  * @returns {Object|null} - The created ProseMirror node or null if the type is not supported.
  */
@@ -528,17 +300,6 @@ const createNode = (editorView, nodeType, content) => {
       });
 
       return mentionNode;
-    }
-    case 'cannedResponse': {
-      // Strip unsupported formatting before parsing to ensure content can be inserted
-      // into channels that don't support certain markdown features (e.g., API channels)
-      const sanitizedContent = stripUnsupportedFormatting(
-        content,
-        state.schema
-      );
-      return new MessageMarkdownTransformer(state.schema).parse(
-        sanitizedContent
-      );
     }
     case 'variable':
       return state.schema.text(content);
@@ -564,15 +325,6 @@ const nodeCreators = {
     from,
     to,
   }),
-  cannedResponse: (editorView, content, from, to, variables) => {
-    const updatedMessage = resolveVariablesInMessage(content, variables);
-    const node = createNode(editorView, 'cannedResponse', updatedMessage);
-    return {
-      node,
-      from: node.textContent === updatedMessage ? from : from - 1,
-      to,
-    };
-  },
   variable: (editorView, content, from, to, variables) => ({
     node: createNode(
       editorView,
@@ -597,10 +349,10 @@ const nodeCreators = {
 /**
  * Retrieves a content node based on the specified type and content, using a functional approach to select the appropriate node creation function.
  * @param {Object} editorView - The editor view instance.
- * @param {string} type - The type of content node to create ('mention', 'cannedResponse', 'variable', 'emoji').
+ * @param {string} type - The type of content node to create ('mention', 'variable', 'emoji').
  * @param {string|Object} content - The content to be transformed into a node.
  * @param {Object} range - An object containing 'from' and 'to' properties indicating the range in the document where the node should be placed.
- * @param {Object} variables - Optional. Variables to replace in the content, used for 'cannedResponse' type.
+ * @param {Object} variables - Optional. Variables to replace in variable nodes.
  * @returns {Object} - An object containing the created node and the updated 'from' and 'to' positions.
  */
 export const getContentNode = (

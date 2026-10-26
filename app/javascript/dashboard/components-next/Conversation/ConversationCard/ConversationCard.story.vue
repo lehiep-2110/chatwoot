@@ -136,8 +136,6 @@ const conversationWithoutMeta = {
   lastActivityAt: 1730885168,
   priority: 'low',
   waitingSince: 0,
-  slaPolicyId: null,
-  slaEvents: [],
 };
 
 const conversationWithMeta = {
@@ -298,37 +296,6 @@ const conversationWithMeta = {
   lastActivityAt: 1730885428,
   priority: 'urgent',
   waitingSince: 1730885428,
-  slaPolicyId: 3,
-  appliedSla: {
-    id: 4,
-    sla_id: 3,
-    sla_status: 'active_with_misses',
-    created_at: 1712127410,
-    updated_at: 1712127545,
-    sla_description:
-      'Premium Service Level Agreements (SLAs) are contracts that define clear expectations ',
-    sla_name: 'Premium SLA',
-    sla_first_response_time_threshold: 120,
-    sla_next_response_time_threshold: 180,
-    sla_only_during_business_hours: false,
-    sla_resolution_time_threshold: 360,
-  },
-  slaEvents: [
-    {
-      id: 8,
-      event_type: 'frt',
-      meta: {},
-      updated_at: 1712127545,
-      created_at: 1712127545,
-    },
-    {
-      id: 9,
-      event_type: 'rt',
-      meta: {},
-      updated_at: 1712127790,
-      created_at: 1712127790,
-    },
-  ],
 };
 
 const contactForConversationWithoutMeta = computed(() => ({
@@ -427,7 +394,7 @@ const accountLabels = computed(() => [
         />
       </div>
     </Variant>
-    <Variant title="Conversation with meta (SLA, Labels)">
+    <Variant title="Conversation with meta (Labels)">
       <div class="flex flex-col">
         <ConversationCard
           :key="conversationWithMeta.id"
@@ -458,7 +425,7 @@ const accountLabels = computed(() => [
         />
       </div>
     </Variant>
-    <Variant title="Conversation with meta (SLA, Labels, Unread count)">
+    <Variant title="Conversation with meta (Labels, Unread count)">
       <div class="flex flex-col">
         <ConversationCard
           :key="conversationWithMeta.id"

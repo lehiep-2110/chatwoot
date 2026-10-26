@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue';
+import { computed } from 'vue';
 import { getInboxIconByType } from 'dashboard/helper/inbox';
 import { useRouter, useRoute } from 'vue-router';
 import { frontendURL, conversationUrl } from 'dashboard/helper/URLHelper.js';
@@ -36,8 +36,6 @@ const exactTimestamp = useExactTimestamp();
 const router = useRouter();
 const route = useRoute();
 
-const cardMessagePreviewWithMetaRef = ref(null);
-
 const currentContact = computed(() => props.contact);
 
 const currentContactName = computed(() => currentContact.value?.name);
@@ -65,12 +63,7 @@ const hasVisibleLabels = computed(() => {
   return props.accountLabels.some(({ title }) => labels.includes(title));
 });
 
-const showMessagePreviewWithoutMeta = computed(() => {
-  return (
-    !cardMessagePreviewWithMetaRef.value?.hasSlaThreshold &&
-    !hasVisibleLabels.value
-  );
-});
+const showMessagePreviewWithoutMeta = computed(() => !hasVisibleLabels.value);
 
 const onCardClick = e => {
   const path = frontendURL(
@@ -138,9 +131,7 @@ const onCardClick = e => {
       />
       <CardMessagePreviewWithMeta
         v-show="!showMessagePreviewWithoutMeta"
-        ref="cardMessagePreviewWithMetaRef"
         :conversation="conversation"
-        :contact="contact"
         :account-labels="accountLabels"
         :has-labels="hasVisibleLabels"
       />

@@ -12,6 +12,16 @@ RSpec.describe Conversations::PermissionFilterService do
   before { create(:inbox_member, user: agent, inbox: inbox) }
 
   describe '#perform' do
+    context 'when account membership is revoked before inbox cleanup' do
+      before { agent.account_users.find_by!(account: account).destroy! }
+
+      it 'denies both query plans despite the remaining inbox membership' do
+        expect(agent.inboxes).to include(inbox)
+        expect(described_class.new(account.conversations, agent, account).perform).to be_empty
+        expect(described_class.new(account.conversations, agent, account, plan_hint_selective_filter: true).perform).to be_empty
+      end
+    end
+
     context 'when user is an administrator' do
       it 'returns all conversations' do
         result = described_class.new(

@@ -2,76 +2,37 @@ require 'rails_helper'
 
 RSpec.describe 'Enterprise Conversations API', type: :request do
   let(:account) { create(:account) }
-  let(:admin) { create(:user, account: account, role: :administrator) }
+  let(:agent) { create(:user, account: account, role: :agent) }
+  let(:conversation) { create(:conversation, account: account) }
+  let(:policy) { create(:sla_policy, account: account) }
 
-  describe 'PATCH /api/v1/accounts/{account.id}/conversations/:id' do
-    let(:conversation) { create(:conversation, account: account) }
-    let(:sla_policy) { create(:sla_policy, account: account) }
-    let(:params) { { sla_policy_id: sla_policy.id } }
+  before { create(:inbox_member, user: agent, inbox: conversation.inbox) }
 
-    context 'when it is an authenticated user' do
-      let(:agent) { create(:user, account: account, role: :agent) }
+  [true, false].each do |enabled|
+    it "ignores retired SLA assignment when the reserved feature flag is #{enabled}" do
+      account.enable_features!('sla') if enabled
+      account.disable_features!('sla') unless enabled
 
-      before do
-        account.enable_features!('sla')
-        create(:inbox_member, user: agent, inbox: conversation.inbox)
-      end
+      patch "/api/v1/accounts/#{account.id}/conversations/#{conversation.display_id}",
+            params: { sla_policy_id: policy.id, priority: 'high' }, headers: agent.create_new_auth_token, as: :json
 
-      it 'updates the conversation if you are an agent with access to inbox' do
-        patch "/api/v1/accounts/#{account.id}/conversations/#{conversation.display_id}",
-              params: params,
-              headers: agent.create_new_auth_token,
-              as: :json
-
-        expect(response).to have_http_status(:success)
-        expect(JSON.parse(response.body, symbolize_names: true)[:sla_policy_id]).to eq(sla_policy.id)
-      end
-
-      it 'throws error if conversation already has a different sla' do
-        conversation.update(sla_policy: create(:sla_policy, account: account))
-        patch "/api/v1/accounts/#{account.id}/conversations/#{conversation.display_id}",
-              params: params,
-              headers: agent.create_new_auth_token,
-              as: :json
-
-        expect(response).to have_http_status(:unprocessable_entity)
-        expect(JSON.parse(response.body, symbolize_names: true)[:message]).to eq('Sla policy conversation already has a different sla')
-      end
-
-      it 'throws error if conversation contact is blocked' do
-        conversation.contact.update!(blocked: true)
-
-        patch "/api/v1/accounts/#{account.id}/conversations/#{conversation.display_id}",
-              params: params,
-              headers: agent.create_new_auth_token,
-              as: :json
-
-        expect(response).to have_http_status(:unprocessable_entity)
-        expect(JSON.parse(response.body, symbolize_names: true)[:message])
-          .to eq('Sla policy cannot be assigned to conversations with blocked contacts')
-      end
+      expect(response).to have_http_status(:ok)
+      expect(conversation.reload).to have_attributes(sla_policy_id: nil, priority: 'high')
+      expect(conversation.applied_sla).to be_nil
+      expect(response.parsed_body['sla_policy_id']).to be_nil
     end
+  end
 
-    context 'when the sla feature is disabled' do
-      let(:agent) { create(:user, account: account, role: :agent) }
-      let(:existing_sla_policy) { create(:sla_policy, account: account) }
+  it 'keeps historical assignments while updating supported conversation fields' do
+    conversation.update!(sla_policy_id: policy.id)
 
-      before do
-        account.enable_features!('sla')
-        conversation.update!(sla_policy: existing_sla_policy)
-        account.disable_features!('sla')
-        create(:inbox_member, user: agent, inbox: conversation.inbox)
-      end
+    patch "/api/v1/accounts/#{account.id}/conversations/#{conversation.display_id}",
+          params: { sla_policy_id: create(:sla_policy, account: account).id, priority: 'high' },
+          headers: agent.create_new_auth_token, as: :json
 
-      it 'ignores the sla assignment and keeps the existing policy' do
-        patch "/api/v1/accounts/#{account.id}/conversations/#{conversation.display_id}",
-              params: params,
-              headers: agent.create_new_auth_token,
-              as: :json
-
-        expect(response).to have_http_status(:success)
-        expect(conversation.reload.sla_policy_id).to eq(existing_sla_policy.id)
-      end
-    end
+    expect(response).to have_http_status(:ok)
+    expect(conversation.reload).to have_attributes(sla_policy_id: policy.id, priority: 'high')
+    expect(conversation.applied_sla).to be_nil
+    expect(response.parsed_body.keys).not_to include('applied_sla', 'sla_events')
   end
 end

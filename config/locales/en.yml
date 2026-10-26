@@ -74,6 +74,9 @@ en:
       cannot_revoke_current: You cannot revoke the current session.
 
   errors:
+    voice_messages_disabled: 'Sending audio messages is no longer available. Your message was not sent.'
+    message_signatures_disabled: 'Message signatures are no longer available.'
+    private_notes_disabled: 'Private notes are no longer available. Your message was not sent.'
     account:
       not_authorized: You are not authorized to access this account
       email_limit_exceeded: The daily email limit for this account has been reached

@@ -21,19 +21,6 @@ export const NOTIFICATION_TYPES = [
       'PROFILE_SETTINGS.FORM.NOTIFICATIONS.TYPES.PARTICIPATING_CONVERSATION_NEW_MESSAGE',
     value: 'participating_conversation_new_message',
   },
-  {
-    label:
-      'PROFILE_SETTINGS.FORM.NOTIFICATIONS.TYPES.SLA_MISSED_FIRST_RESPONSE',
-    value: 'sla_missed_first_response',
-  },
-  {
-    label: 'PROFILE_SETTINGS.FORM.NOTIFICATIONS.TYPES.SLA_MISSED_NEXT_RESPONSE',
-    value: 'sla_missed_next_response',
-  },
-  {
-    label: 'PROFILE_SETTINGS.FORM.NOTIFICATIONS.TYPES.SLA_MISSED_RESOLUTION',
-    value: 'sla_missed_resolution',
-  },
 ];
 
 export const EVENT_TYPES = {

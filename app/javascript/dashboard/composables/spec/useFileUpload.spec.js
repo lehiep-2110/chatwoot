@@ -52,6 +52,21 @@ describe('useFileUpload', () => {
     getMaxUploadSizeByChannel.mockReturnValue(25); // default max size MB for tests
   });
 
+  it('rejects audio before creating a direct upload or attaching a file', () => {
+    const { onFileUpload } = useFileUpload({
+      inbox,
+      attachFile: mockAttachFile,
+    });
+    onFileUpload({
+      file: new File(['audio'], 'sample.ogg', { type: 'audio/ogg' }),
+    });
+    expect(DirectUpload).not.toHaveBeenCalled();
+    expect(mockAttachFile).not.toHaveBeenCalled();
+    expect(mockTranslate).toHaveBeenCalledWith(
+      'CONVERSATION.REPLYBOX.AUDIO_MESSAGES_DISABLED'
+    );
+  });
+
   it('handles direct file upload when direct uploads enabled', () => {
     const { onFileUpload } = useFileUpload({
       inbox,

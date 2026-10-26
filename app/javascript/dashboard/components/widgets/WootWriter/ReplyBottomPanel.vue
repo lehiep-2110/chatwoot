@@ -1,273 +1,80 @@
-<script>
-import { ref } from 'vue';
-import { useUISettings } from 'dashboard/composables/useUISettings';
+<script setup>
+import { computed, onMounted, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useKeyboardEvents } from 'dashboard/composables/useKeyboardEvents';
 import FileUpload from 'vue-upload-component';
 import * as ActiveStorage from 'activestorage';
-import inboxMixin from 'shared/mixins/inboxMixin';
-import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import { getAllowedFileTypesByChannel } from '@chatwoot/utils';
 import RequestContactInfoButton from '../RequestContactInfoButton.vue';
 import { INBOX_TYPES } from 'dashboard/helper/inbox';
-import { mapGetters } from 'vuex';
 import NextButton from 'dashboard/components-next/button/Button.vue';
 
-export default {
-  name: 'ReplyBottomPanel',
-  components: {
-    NextButton,
-    FileUpload,
-    RequestContactInfoButton,
-  },
-  mixins: [inboxMixin],
-  props: {
-    isNote: {
-      type: Boolean,
-      default: false,
-    },
-    onSend: {
-      type: Function,
-      default: () => {},
-    },
-    sendButtonText: {
-      type: String,
-      default: '',
-    },
-    recordingAudioDurationText: {
-      type: String,
-      default: '00:00',
-    },
-    // inbox prop is used in /mixins/inboxMixin,
-    // remove this props when refactoring to composable if not needed
-    // eslint-disable-next-line vue/no-unused-properties
-    inbox: {
-      type: Object,
-      default: () => ({}),
-    },
-    showFileUpload: {
-      type: Boolean,
-      default: false,
-    },
-    showAudioRecorder: {
-      type: Boolean,
-      default: false,
-    },
-    onFileUpload: {
-      type: Function,
-      default: () => {},
-    },
-    toggleEmojiPicker: {
-      type: Function,
-      default: () => {},
-    },
-    toggleAudioRecorder: {
-      type: Function,
-      default: () => {},
-    },
-    toggleAudioRecorderPlayPause: {
-      type: Function,
-      default: () => {},
-    },
-    isRecordingAudio: {
-      type: Boolean,
-      default: false,
-    },
-    recordingAudioState: {
-      type: String,
-      default: '',
-    },
-    isSendDisabled: {
-      type: Boolean,
-      default: false,
-    },
-    isOnPrivateNote: {
-      type: Boolean,
-      default: false,
-    },
-    enableMultipleFileUpload: {
-      type: Boolean,
-      default: true,
-    },
-    enableWhatsAppTemplates: {
-      type: Boolean,
-      default: false,
-    },
-    enableContentTemplates: {
-      type: Boolean,
-      default: false,
-    },
-    // eslint-disable-next-line vue/no-unused-properties
-    message: {
-      type: String,
-      default: '',
-    },
-    newConversationModalActive: {
-      type: Boolean,
-      default: false,
-    },
-    conversationType: {
-      type: String,
-      default: '',
-    },
-    showQuotedReplyToggle: {
-      type: Boolean,
-      default: false,
-    },
-    quotedReplyEnabled: {
-      type: Boolean,
-      default: false,
-    },
-    isEditorDisabled: {
-      type: Boolean,
-      default: false,
-    },
-  },
-  emits: [
-    'selectWhatsappTemplate',
-    'selectContentTemplate',
-    'toggleQuotedReply',
-    'requestContactInfoTemplate',
-  ],
-  setup(props) {
-    const { setSignatureFlagForInbox, fetchSignatureFlagFromUISettings } =
-      useUISettings();
+const props = defineProps({
+  onSend: { type: Function, default: () => {} },
+  sendButtonText: { type: String, default: '' },
+  inbox: { type: Object, default: () => ({}) },
+  showFileUpload: { type: Boolean, default: false },
+  onFileUpload: { type: Function, default: () => {} },
+  toggleEmojiPicker: { type: Function, default: () => {} },
+  isSendDisabled: { type: Boolean, default: false },
+  enableMultipleFileUpload: { type: Boolean, default: true },
+  enableWhatsAppTemplates: { type: Boolean, default: false },
+  enableContentTemplates: { type: Boolean, default: false },
+  newConversationModalActive: { type: Boolean, default: false },
+  conversationType: { type: String, default: '' },
+  showQuotedReplyToggle: { type: Boolean, default: false },
+  quotedReplyEnabled: { type: Boolean, default: false },
+  isEditorDisabled: { type: Boolean, default: false },
+});
 
-    const uploadRef = ref(false);
+defineEmits([
+  'selectWhatsappTemplate',
+  'selectContentTemplate',
+  'toggleQuotedReply',
+  'requestContactInfoTemplate',
+]);
 
-    const keyboardEvents = {
-      '$mod+Alt+KeyA': {
-        action: () => {
-          // Skip if editor is disabled (e.g., WhatsApp 24-hour window expired)
-          if (props.isEditorDisabled) return;
+const { t } = useI18n();
+const uploadRef = ref(false);
+const showAttachButton = computed(
+  () => !props.isEditorDisabled && props.showFileUpload
+);
+const allowedFileTypes = computed(() => {
+  const channelType =
+    props.conversationType === 'instagram_direct_message'
+      ? INBOX_TYPES.INSTAGRAM
+      : props.inbox.channel_type;
+  return getAllowedFileTypesByChannel({
+    channelType,
+    medium: props.inbox.medium,
+  });
+});
+const enableDragAndDrop = computed(() => !props.newConversationModalActive);
+const quotedReplyToggleTooltip = computed(() =>
+  props.quotedReplyEnabled
+    ? t('CONVERSATION.REPLYBOX.QUOTED_REPLY.DISABLE_TOOLTIP')
+    : t('CONVERSATION.REPLYBOX.QUOTED_REPLY.ENABLE_TOOLTIP')
+);
 
-          // TODO: This is really hacky, we need to replace the file picker component with
-          // a custom one, where the logic and the component markup is isolated.
-          // Once we have the custom component, we can remove the hacky logic below.
-
-          const uploadTriggerButton = document.querySelector(
-            '#conversationAttachment'
-          );
-          if (uploadTriggerButton) uploadTriggerButton.click();
-        },
-        allowOnFocusedInput: true,
-      },
-    };
-
-    useKeyboardEvents(keyboardEvents);
-
-    return {
-      setSignatureFlagForInbox,
-      fetchSignatureFlagFromUISettings,
-      uploadRef,
-    };
-  },
-  computed: {
-    ...mapGetters({
-      accountId: 'getCurrentAccountId',
-      isFeatureEnabledonAccount: 'accounts/isFeatureEnabledonAccount',
-      uiFlags: 'integrations/getUIFlags',
-    }),
-    wrapClass() {
-      return {
-        'is-note-mode': this.isNote,
-      };
-    },
-    showAttachButton() {
-      if (this.isEditorDisabled) return false;
-      return this.showFileUpload || this.isNote;
-    },
-    showAudioRecorderButton() {
-      if (this.isEditorDisabled) return false;
-      if (this.isALineChannel || this.isATiktokChannel) {
-        return false;
-      }
-      // Disable audio recorder for safari browser as recording is not supported
-      // const isSafari = /^((?!chrome|android|crios|fxios).)*safari/i.test(
-      //   navigator.userAgent
-      // );
-
-      return (
-        this.isFeatureEnabledonAccount(
-          this.accountId,
-          FEATURE_FLAGS.VOICE_RECORDER
-        ) && this.showAudioRecorder
-        // !isSafari
+useKeyboardEvents({
+  '$mod+Alt+KeyA': {
+    action: () => {
+      if (props.isEditorDisabled) return;
+      const uploadTriggerButton = document.querySelector(
+        '#conversationAttachment'
       );
+      if (uploadTriggerButton) uploadTriggerButton.click();
     },
-    showAudioPlayStopButton() {
-      if (this.isEditorDisabled) return false;
-      return this.showAudioRecorder && this.isRecordingAudio;
-    },
-    isInstagramDM() {
-      return this.conversationType === 'instagram_direct_message';
-    },
-    allowedFileTypes() {
-      if (this.isOnPrivateNote) {
-        return getAllowedFileTypesByChannel();
-      }
+    allowOnFocusedInput: true,
+  },
+});
 
-      let channelType = this.channelType || this.inbox?.channel_type;
-      if (this.isAnInstagramChannel || this.isInstagramDM) {
-        channelType = INBOX_TYPES.INSTAGRAM;
-      }
-
-      return getAllowedFileTypesByChannel({
-        channelType,
-        medium: this.inbox?.medium,
-      });
-    },
-    enableDragAndDrop() {
-      return !this.newConversationModalActive;
-    },
-    audioRecorderPlayStopIcon() {
-      switch (this.recordingAudioState) {
-        // playing paused recording stopped inactive destroyed
-        case 'playing':
-          return 'i-ph-pause';
-        case 'paused':
-          return 'i-ph-play';
-        case 'stopped':
-          return 'i-ph-play';
-        default:
-          return 'i-ph-stop';
-      }
-    },
-    showMessageSignatureButton() {
-      if (this.isEditorDisabled) return false;
-      return !this.isOnPrivateNote;
-    },
-    sendWithSignature() {
-      // channelType is sourced from inboxMixin
-      return this.fetchSignatureFlagFromUISettings(this.channelType);
-    },
-    signatureToggleTooltip() {
-      return this.sendWithSignature
-        ? this.$t('CONVERSATION.FOOTER.DISABLE_SIGN_TOOLTIP')
-        : this.$t('CONVERSATION.FOOTER.ENABLE_SIGN_TOOLTIP');
-    },
-    isFetchingAppIntegrations() {
-      return this.uiFlags.isFetching;
-    },
-    quotedReplyToggleTooltip() {
-      return this.quotedReplyEnabled
-        ? this.$t('CONVERSATION.REPLYBOX.QUOTED_REPLY.DISABLE_TOOLTIP')
-        : this.$t('CONVERSATION.REPLYBOX.QUOTED_REPLY.ENABLE_TOOLTIP');
-    },
-  },
-  mounted() {
-    ActiveStorage.start();
-  },
-  methods: {
-    toggleMessageSignature() {
-      this.setSignatureFlagForInbox(this.channelType, !this.sendWithSignature);
-    },
-  },
-};
+onMounted(() => ActiveStorage.start());
 </script>
 
 <template>
-  <div class="flex justify-between p-3" :class="wrapClass">
-    <div class="left-wrap">
+  <div class="flex justify-between p-3">
+    <div class="flex items-center gap-2">
       <NextButton
         v-if="!isEditorDisabled"
         v-tooltip.top-end="$t('CONVERSATION.REPLYBOX.TIP_EMOJI_ICON')"
@@ -281,6 +88,7 @@ export default {
         v-if="showAttachButton"
         ref="uploadRef"
         v-tooltip.top-end="$t('CONVERSATION.REPLYBOX.TIP_ATTACH_ICON')"
+        class="[&_label]:cursor-pointer [&:hover_button:enabled]:bg-n-slate-9/20"
         input-id="conversationAttachment"
         :size="4096 * 4096"
         :accept="allowedFileTypes"
@@ -303,33 +111,6 @@ export default {
         />
       </FileUpload>
       <NextButton
-        v-if="showAudioRecorderButton"
-        v-tooltip.top-end="$t('CONVERSATION.REPLYBOX.TIP_AUDIORECORDER_ICON')"
-        :icon="!isRecordingAudio ? 'i-ph-microphone' : 'i-ph-microphone-slash'"
-        slate
-        faded
-        sm
-        @click="toggleAudioRecorder"
-      />
-      <NextButton
-        v-if="showAudioPlayStopButton"
-        :icon="audioRecorderPlayStopIcon"
-        slate
-        faded
-        sm
-        :label="recordingAudioDurationText"
-        @click="toggleAudioRecorderPlayPause"
-      />
-      <NextButton
-        v-if="showMessageSignatureButton"
-        v-tooltip.top-end="signatureToggleTooltip"
-        icon="i-ph-signature"
-        slate
-        faded
-        sm
-        @click="toggleMessageSignature"
-      />
-      <NextButton
         v-if="showQuotedReplyToggle"
         v-tooltip.top-end="quotedReplyToggleTooltip"
         icon="i-ph-quotes"
@@ -349,12 +130,11 @@ export default {
         @click="$emit('selectWhatsappTemplate')"
       />
       <RequestContactInfoButton
-        v-if="!isOnPrivateNote"
         @request-template="$emit('requestContactInfoTemplate')"
       />
       <NextButton
         v-if="enableContentTemplates"
-        v-tooltip.top-end="'Content Templates'"
+        v-tooltip.top-end="$t('CONVERSATION.FOOTER.WHATSAPP_TEMPLATES')"
         icon="i-ph-whatsapp-logo"
         slate
         faded
@@ -373,12 +153,12 @@ export default {
         </div>
       </transition>
     </div>
-    <div class="right-wrap">
+    <div class="flex">
       <NextButton
         :label="sendButtonText"
         type="submit"
         sm
-        :color="isNote ? 'amber' : 'blue'"
+        color="blue"
         :disabled="isSendDisabled"
         class="flex-shrink-0"
         @click="onSend"
@@ -386,23 +166,3 @@ export default {
     </div>
   </div>
 </template>
-
-<style lang="scss" scoped>
-.left-wrap {
-  @apply items-center flex gap-2;
-}
-
-.right-wrap {
-  @apply flex;
-}
-
-:deep(.file-uploads) {
-  label {
-    @apply cursor-pointer;
-  }
-
-  &:hover button {
-    @apply enabled:bg-n-slate-9/20;
-  }
-}
-</style>

@@ -3,13 +3,13 @@ class ActionCableListener < BaseListener
 
   def notification_created(event)
     notification, account, unread_count, count = extract_notification_and_account(event)
-    tokens = [event.data[:notification].user.pubsub_token]
+    tokens = notification_accessible?(notification) ? [notification.user.pubsub_token] : []
     broadcast(account, tokens, NOTIFICATION_CREATED, { notification: notification.push_event_data, unread_count: unread_count, count: count })
   end
 
   def notification_updated(event)
     notification, account, unread_count, count = extract_notification_and_account(event)
-    tokens = [event.data[:notification].user.pubsub_token]
+    tokens = notification_accessible?(notification) ? [notification.user.pubsub_token] : []
     broadcast(account, tokens, NOTIFICATION_UPDATED, { notification: notification.push_event_data, unread_count: unread_count, count: count })
   end
 
@@ -200,7 +200,7 @@ class ActionCableListener < BaseListener
   end
 
   def user_tokens(account, agents)
-    agent_tokens = agents.pluck(:pubsub_token)
+    agent_tokens = agents.where(id: account.users.select(:id)).pluck(:pubsub_token)
     admin_tokens = account.administrators.pluck(:pubsub_token)
     (agent_tokens + admin_tokens).uniq
   end

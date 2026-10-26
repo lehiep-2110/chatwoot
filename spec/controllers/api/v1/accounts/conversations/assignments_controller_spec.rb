@@ -265,9 +265,10 @@ RSpec.describe 'Conversation Assignment API', type: :request do
         expect(conversation.reload).to have_attributes(assignee: recipient, status: 'resolved')
       end
 
-      it 'accepts a member of the conversation team without inbox membership' do
+      it 'rejects a member of the conversation team without inbox membership' do
         team = create(:team, account: account, allow_auto_assign: false)
         create(:team_member, team: team, user: recipient)
+        create(:team_member, team: team, user: original_assignee)
         conversation.update!(team: team)
 
         post api_v1_account_conversation_assignments_url(account_id: account.id, conversation_id: conversation.display_id),
@@ -275,8 +276,8 @@ RSpec.describe 'Conversation Assignment API', type: :request do
              headers: administrator.create_new_auth_token,
              as: :json
 
-        expect(response).to have_http_status(:success)
-        expect(conversation.reload).to have_attributes(assignee: recipient, team: team, status: 'resolved')
+        expect(response).to have_http_status(:unauthorized)
+        expect(conversation.reload).to have_attributes(assignee: original_assignee, team: team, status: 'resolved')
       end
 
       it 'accepts an administrator of this account without inbox membership' do

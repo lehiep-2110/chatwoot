@@ -46,6 +46,9 @@ class Notification < ApplicationRecord
     sla_missed_resolution: 8
   }.freeze
 
+  # Keep enum/flag positions for historical notifications while disabling their delivery.
+  RETIRED_NOTIFICATION_TYPES = %w[sla_missed_first_response sla_missed_next_response sla_missed_resolution].freeze
+
   enum notification_type: NOTIFICATION_TYPES
 
   before_create :set_last_activity_at
@@ -54,6 +57,10 @@ class Notification < ApplicationRecord
   after_update_commit :dispatch_update_event
 
   PRIMARY_ACTORS = ['Conversation'].freeze
+
+  def delivery_supported?
+    RETIRED_NOTIFICATION_TYPES.exclude?(notification_type)
+  end
 
   def push_event_data
     # Secondary actor could be nil for cases like system assigning conversation

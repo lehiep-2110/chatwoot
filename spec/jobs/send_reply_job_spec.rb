@@ -5,6 +5,21 @@ RSpec.describe SendReplyJob do
 
   let(:message) { create(:message) }
 
+  it 'blocks delivery of queued or retried outgoing audio and preserves its attachment' do
+    outgoing = create(:message, message_type: :outgoing)
+    attachment = Rails.root.join('spec/assets/sample.ogg').open do |audio|
+      outgoing.attachments.create!(
+        account: outgoing.account, file_type: :audio,
+        file: { io: audio, filename: 'sample.ogg', content_type: 'audio/ogg' }
+      )
+    end
+    expect(Messages::SendEmailNotificationService).not_to receive(:new)
+    described_class.perform_now(outgoing.id)
+    expect(outgoing.reload).to be_failed
+    expect(outgoing.external_error).to eq(I18n.t('errors.voice_messages_disabled'))
+    expect(outgoing.attachments).to include(attachment)
+  end
+
   it 'enqueues the job' do
     expect { job }.to have_enqueued_job(described_class)
       .with(message)

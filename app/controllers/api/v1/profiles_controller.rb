@@ -1,5 +1,6 @@
 class Api::V1::ProfilesController < Api::BaseController
   before_action :set_user
+  before_action :ensure_signature_disabled, only: :update
 
   def show; end
 
@@ -57,13 +58,16 @@ class Api::V1::ProfilesController < Api::BaseController
     params.require(:profile).permit(:account_id, :auto_offline)
   end
 
+  def ensure_signature_disabled
+    raise CustomExceptions::MessageSignaturesDisabled if params.require(:profile).key?(:message_signature)
+  end
+
   def profile_params
     params.require(:profile).permit(
       :email,
       :name,
       :display_name,
       :avatar,
-      :message_signature,
       :account_id,
       ui_settings: {}
     )

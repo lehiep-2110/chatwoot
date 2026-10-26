@@ -159,7 +159,7 @@ RSpec.describe 'API Base', type: :request do
       it 'returns 401 unauthorized' do
         account.update!(status: :suspended)
 
-        post "/api/v1/accounts/#{account.id}/canned_responses",
+        post "/api/v1/accounts/#{account.id}/teams",
              headers: { api_access_token: user.access_token.token },
              as: :json
 
@@ -171,7 +171,7 @@ RSpec.describe 'API Base', type: :request do
         user_with_out_access = create(:user)
         account.update!(status: :suspended)
 
-        post "/api/v1/accounts/#{account.id}/canned_responses",
+        post "/api/v1/accounts/#{account.id}/teams",
              headers: { api_access_token: user_with_out_access.access_token.token },
              as: :json
 

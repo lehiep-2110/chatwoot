@@ -85,7 +85,7 @@ export const generateCustomAttributeTypes = (customAttributes, type) => {
   });
 };
 
-// Leading icon per action key, shared by the automation and macro action pickers.
+// Leading icon per action key, used by the automation action picker.
 const ACTION_ICONS = {
   assign_agent: 'i-lucide-user-round',
   assign_team: 'i-lucide-users-round',
@@ -105,13 +105,12 @@ const ACTION_ICONS = {
   pending_conversation: 'i-lucide-circle-dashed',
   resolve_conversation: 'i-lucide-circle-check',
   change_priority: 'i-lucide-signal-high',
-  add_sla: 'i-lucide-gauge',
 };
 
 const DEFAULT_ACTION_ICON = 'i-lucide-zap';
 
 /**
- * Resolve the leading icon for an automation or macro action.
+ * Resolve the leading icon for an automation action.
  * @param {string} key - The action key.
  * @returns {string} Icon class.
  */
@@ -148,7 +147,6 @@ export const getActionOptions = ({
   agents,
   teams,
   labels,
-  slaPolicies,
   type,
   addNoneToListFn,
   priorityOptions,
@@ -162,7 +160,6 @@ export const getActionOptions = ({
     add_label: generateLabelOptions(labels),
     remove_label: generateLabelOptions(labels),
     change_priority: priorityOptions,
-    add_sla: slaPolicies,
   };
   return actionsMap[type];
 };

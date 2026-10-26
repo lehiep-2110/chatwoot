@@ -14,6 +14,14 @@ class BaseListener
     [notification, notification.account, unread_count, count]
   end
 
+  def notification_accessible?(notification)
+    return true unless notification.primary_actor_type == 'Conversation'
+
+    Conversations::PermissionFilterService.new(
+      notification.account.conversations, notification.user, notification.account
+    ).perform.exists?(id: notification.primary_actor_id)
+  end
+
   def extract_message_and_account(event)
     message = event.data[:message]
     [message, message.account]

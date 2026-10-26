@@ -13,10 +13,6 @@ const props = defineProps({
     type: String,
     default: '',
   },
-  isOnPrivateNote: {
-    type: Boolean,
-    default: false,
-  },
 });
 
 const store = useStore();
@@ -44,7 +40,6 @@ const assignedAgent = computed({
 });
 
 const hasMessage = computed(() => props.message !== '');
-const isUserTyping = computed(() => hasMessage.value && !props.isOnPrivateNote);
 const isUnassigned = computed(() => !assignedAgent.value);
 const isAssignedToOtherAgent = computed(
   () => assignedAgent.value?.id !== currentUser.value?.id
@@ -52,7 +47,7 @@ const isAssignedToOtherAgent = computed(
 
 const showSelfAssignBanner = computed(() => {
   return (
-    isUserTyping.value && (isUnassigned.value || isAssignedToOtherAgent.value)
+    hasMessage.value && (isUnassigned.value || isAssignedToOtherAgent.value)
   );
 });
 

@@ -7,7 +7,8 @@ class Messages::MessageBuilder
 
   def initialize(user, conversation, params)
     @params = params
-    @private = params[:private] || false
+    raise CustomExceptions::PrivateNotesDisabled if ActiveModel::Type::Boolean.new.cast(params[:private])
+
     @conversation = conversation
     @user = user
     @account = conversation.account
@@ -22,6 +23,8 @@ class Messages::MessageBuilder
   end
 
   def perform
+    raise CustomExceptions::VoiceMessagesDisabled if @message_type != 'incoming' && @is_voice_message
+
     @message = @conversation.messages.build(message_params)
     process_attachments
     process_emails
@@ -52,13 +55,16 @@ class Messages::MessageBuilder
     return if @attachments.blank?
 
     @attachments.each do |uploaded_attachment|
+      attachment_type = attachment_file_type(uploaded_attachment)
+      raise CustomExceptions::VoiceMessagesDisabled if @message_type != 'incoming' && attachment_type == :audio
+
       attachment = @message.attachments.build(
         account_id: @message.account_id,
         file: uploaded_attachment
       )
 
-      attachment.file_type = attachment_file_type(uploaded_attachment)
-      tag_voice_message(attachment)
+      attachment.file_type = attachment_type
+      attachment.meta = { 'is_voice_message' => true } if @is_voice_message && attachment_type == :audio
     end
   end
 
@@ -68,12 +74,6 @@ class Messages::MessageBuilder
     else
       file_type(uploaded_attachment&.content_type)
     end
-  end
-
-  def tag_voice_message(attachment)
-    return unless @is_voice_message && attachment.file_type == 'audio'
-
-    attachment.meta = (attachment.meta || {}).merge('is_voice_message' => true)
   end
 
   def process_emails
@@ -145,7 +145,7 @@ class Messages::MessageBuilder
       inbox_id: @conversation.inbox_id,
       message_type: message_type,
       content: @params[:content],
-      private: @private,
+      private: false,
       sender: sender,
       content_type: @params[:content_type],
       content_attributes: content_attributes.presence,
@@ -161,7 +161,7 @@ class Messages::MessageBuilder
   end
 
   def should_process_email_content?
-    email_inbox? && !@private && @message.content.present?
+    email_inbox? && @message.content.present?
   end
 
   def build_email_attributes

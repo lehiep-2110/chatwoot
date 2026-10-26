@@ -24,6 +24,8 @@ module RequestExceptionHandler
   rescue Pundit::NotAuthorizedError => e
     log_handled_error(e)
     render_unauthorized('You are not authorized to do this action')
+  rescue CustomExceptions::PrivateNotesDisabled, CustomExceptions::VoiceMessagesDisabled, CustomExceptions::MessageSignaturesDisabled => e
+    render_could_not_create_error(e.message)
   rescue ActionController::ParameterMissing => e
     log_handled_error(e)
     render_could_not_create_error(e.message)

@@ -55,6 +55,10 @@ export default {
       );
     },
     onFileUpload(file) {
+      if ((file?.file?.type || file?.type || '').startsWith('audio/')) {
+        useAlert(this.$t('CONVERSATION.REPLYBOX.AUDIO_MESSAGES_DISABLED'));
+        return;
+      }
       if (this.globalConfig.directUploadsEnabled) {
         this.onDirectFileUpload(file);
       } else {

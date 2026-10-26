@@ -19,10 +19,6 @@ const props = defineProps({
     validator: value => ['info', 'error', 'success'].includes(value),
   },
   enableVariables: { type: Boolean, default: false },
-  enableCannedResponses: { type: Boolean, default: true },
-  signature: { type: String, default: '' },
-  allowSignature: { type: Boolean, default: false },
-  sendWithSignature: { type: Boolean, default: false },
   channelType: { type: String, default: '' },
   medium: { type: String, default: '' },
 });
@@ -102,10 +98,6 @@ watch(
         :focus-on-mount="focusOnMount"
         :disabled="disabled"
         :enable-variables="enableVariables"
-        :enable-canned-responses="enableCannedResponses"
-        :signature="signature"
-        :allow-signature="allowSignature"
-        :send-with-signature="sendWithSignature"
         :channel-type="channelType"
         :medium="medium"
         @input="handleInput"

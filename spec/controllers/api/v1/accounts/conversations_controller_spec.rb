@@ -482,6 +482,19 @@ RSpec.describe 'Conversations API', type: :request do
           expect(response_data[:status]).to eq('pending')
         end
 
+        it 'rejects a nested private note and rolls back the new conversation' do
+          headers = agent.create_new_auth_token
+          expect do
+            post "/api/v1/accounts/#{account.id}/conversations",
+                 headers: headers,
+                 params: { source_id: contact_inbox.source_id, message: { content: 'Confidential note', private: true } },
+                 as: :json
+          end.not_to change(Conversation, :count)
+
+          expect(response).to have_http_status(:unprocessable_entity)
+          expect(response.parsed_body['error']).to eq(I18n.t('errors.private_notes_disabled'))
+        end
+
         it 'creates a new conversation with message when message is passed' do
           allow(Rails.configuration.dispatcher).to receive(:dispatch)
           post "/api/v1/accounts/#{account.id}/conversations",

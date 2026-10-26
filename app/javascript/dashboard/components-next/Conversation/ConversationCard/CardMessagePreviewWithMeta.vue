@@ -1,11 +1,10 @@
 <script setup>
-import { computed, ref } from 'vue';
+import { computed } from 'vue';
 import { useSnakeCase } from 'dashboard/composables/useTransformKeys';
 
 import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
 import MessagePreview from 'dashboard/components-next/Conversation/ConversationCard/MessagePreview.vue';
 import CardLabels from 'dashboard/components-next/Conversation/ConversationCard/CardLabels.vue';
-import SLACardLabel from 'dashboard/components-next/Conversation/ConversationCard/SLACardLabel.vue';
 
 const props = defineProps({
   conversation: {
@@ -16,17 +15,11 @@ const props = defineProps({
     type: Array,
     required: true,
   },
-  contact: {
-    type: Object,
-    required: true,
-  },
   hasLabels: {
     type: Boolean,
     default: false,
   },
 });
-
-const slaCardLabelRef = ref(null);
 
 const lastNonActivityMessage = computed(() =>
   useSnakeCase(props.conversation.lastNonActivityMessage ?? {}, { deep: true })
@@ -44,18 +37,6 @@ const assignee = computed(() => {
 const unreadMessagesCount = computed(() => {
   const { unreadCount } = props.conversation;
   return unreadCount;
-});
-
-const hasSlaThreshold = computed(() => {
-  return (
-    !props.contact?.blocked &&
-    slaCardLabelRef.value?.hasSlaThreshold &&
-    props.conversation?.appliedSla?.id
-  );
-});
-
-defineExpose({
-  hasSlaThreshold,
 });
 </script>
 
@@ -78,20 +59,7 @@ defineExpose({
       </div>
     </div>
 
-    <div
-      class="grid items-center gap-2.5 h-7"
-      :class="
-        hasSlaThreshold && hasLabels
-          ? 'grid-cols-[auto_auto_1fr_20px]'
-          : 'grid-cols-[1fr_20px]'
-      "
-    >
-      <SLACardLabel
-        v-show="hasSlaThreshold"
-        ref="slaCardLabelRef"
-        :conversation="conversation"
-      />
-      <div v-if="hasSlaThreshold && hasLabels" class="w-px h-3 bg-n-slate-4" />
+    <div class="grid grid-cols-[1fr_1.25rem] items-center gap-2.5 h-7">
       <div v-if="hasLabels" class="overflow-hidden">
         <CardLabels
           :conversation-labels="conversation.labels"

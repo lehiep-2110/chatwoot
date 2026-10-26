@@ -12,6 +12,36 @@ RSpec.describe AutomationRules::ActionService do
                              ])
   end
 
+  describe '#perform with historical SLA actions' do
+    it 'skips retired actions and still sends messages and assigns an inbox member' do
+      account.enable_features!('sla')
+      create(:inbox_member, inbox: conversation.inbox, user: agent)
+      # Persist data from before retirement; current validation intentionally rejects this action.
+      # rubocop:disable Rails/SkipsModelValidations
+      rule.update_columns(actions: [
+                            { action_name: 'add_sla', action_params: [123] },
+                            { action_name: 'send_message', action_params: ['Hello from HR'] },
+                            { action_name: 'assign_agent', action_params: [agent.id] }
+                          ])
+      # rubocop:enable Rails/SkipsModelValidations
+      allow(ChatwootExceptionTracker).to receive(:new)
+
+      expect { described_class.new(rule.reload, account, conversation).perform }
+        .to change { conversation.messages.outgoing.count }.by(1)
+
+      expect(conversation.reload.assignee).to eq(agent)
+      expect(conversation.sla_policy_id).to be_nil
+      expect(ChatwootExceptionTracker).not_to have_received(:new)
+    end
+
+    it 'rejects newly configured SLA actions using the existing validation' do
+      rule.actions = [{ action_name: 'add_sla', action_params: [123] }]
+
+      expect(rule).not_to be_valid
+      expect(rule.errors[:actions]).to include('Automation actions add_sla not supported.')
+    end
+  end
+
   describe '#perform' do
     context 'when actions are defined in the rule' do
       it 'will call the actions' do
@@ -180,25 +210,17 @@ RSpec.describe AutomationRules::ActionService do
       end
     end
 
-    describe '#perform with add_private_note action' do
-      let(:message_builder) { double }
-
-      before do
-        allow(Messages::MessageBuilder).to receive(:new).and_return(message_builder)
-        rule.actions.delete_if { |a| a['action_name'] == 'send_message' }
-        rule.actions << { action_name: 'add_private_note', action_params: ['Note'] }
-      end
-
-      it 'will add private note' do
-        expect(message_builder).to receive(:perform)
-        described_class.new(rule, account, conversation).perform
-      end
-
-      it 'will not add note if conversation is a tweet' do
-        twitter_inbox = create(:inbox, channel: create(:channel_twitter_profile, account: account))
-        conversation = create(:conversation, inbox: twitter_inbox, additional_attributes: { type: 'tweet' })
-        expect(message_builder).not_to receive(:perform)
-        described_class.new(rule, account, conversation).perform
+    describe '#perform with a historical add_private_note action' do
+      it 'skips the retired action and still sends supported messages' do
+        rule.actions = [
+          { 'action_name' => 'add_private_note', 'action_params' => ['Confidential note'] },
+          { 'action_name' => 'send_message', 'action_params' => ['Public reply'] }
+        ]
+        allow(ChatwootExceptionTracker).to receive(:new)
+        expect { described_class.new(rule, account, conversation).perform }.to change { conversation.messages.outgoing.count }.by(1)
+        expect(conversation.messages.where(private: true)).to be_empty
+        expect(conversation.messages.last.content).to eq('Public reply')
+        expect(ChatwootExceptionTracker).not_to have_received(:new)
       end
     end
 

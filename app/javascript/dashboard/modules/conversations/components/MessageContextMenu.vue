@@ -3,15 +3,11 @@ import { useAlert } from 'dashboard/composables';
 import { mapGetters } from 'vuex';
 import { useMessageFormatter } from 'shared/composables/useMessageFormatter';
 import ContextMenu from 'dashboard/components/ui/ContextMenu.vue';
-import AddCannedModal from 'dashboard/routes/dashboard/settings/canned/AddCanned.vue';
 import { useSnakeCase } from 'dashboard/composables/useTransformKeys';
 import { copyTextToClipboard } from 'shared/helpers/clipboard';
 import { parseAPIErrorResponse } from 'dashboard/store/utils/api';
 import { conversationUrl, frontendURL } from '../../../helper/URLHelper';
-import {
-  ACCOUNT_EVENTS,
-  CONVERSATION_EVENTS,
-} from '../../../helper/AnalyticsHelper/events';
+import { CONVERSATION_EVENTS } from '../../../helper/AnalyticsHelper/events';
 import MenuItem from '../../../components/widgets/conversation/contextMenu/menuItem.vue';
 import { useTrack } from 'dashboard/composables';
 import NextButton from 'dashboard/components-next/button/Button.vue';
@@ -19,7 +15,6 @@ import ReportCaptainMessageDialog from './ReportCaptainMessageDialog.vue';
 
 export default {
   components: {
-    AddCannedModal,
     MenuItem,
     ContextMenu,
     NextButton,
@@ -57,7 +52,6 @@ export default {
   },
   data() {
     return {
-      isCannedResponseModalOpen: false,
       showDeleteModal: false,
     };
   },
@@ -104,14 +98,6 @@ export default {
     async handleCopy() {
       await copyTextToClipboard(this.plainTextContent);
       useAlert(this.$t('CONTACT_PANEL.COPY_SUCCESSFUL'));
-      this.handleClose();
-    },
-    showCannedResponseModal() {
-      useTrack(ACCOUNT_EVENTS.ADDED_TO_CANNED_RESPONSE);
-      this.isCannedResponseModalOpen = true;
-    },
-    hideCannedResponseModal() {
-      this.isCannedResponseModalOpen = false;
       this.handleClose();
     },
     handleOpen(e) {
@@ -169,17 +155,6 @@ export default {
 
 <template>
   <div class="context-menu">
-    <!-- Add To Canned Responses -->
-    <woot-modal
-      v-if="isCannedResponseModalOpen && enabledOptions['cannedResponse']"
-      v-model:show="isCannedResponseModalOpen"
-      :on-close="hideCannedResponseModal"
-    >
-      <AddCannedModal
-        :response-content="plainTextContent"
-        :on-close="hideCannedResponseModal"
-      />
-    </woot-modal>
     <!-- Confirm Deletion -->
     <woot-delete-modal
       v-if="showDeleteModal && enabledOptions['delete']"
@@ -202,7 +177,7 @@ export default {
       @click="handleOpen"
     />
     <ContextMenu
-      v-if="isOpen && !isCannedResponseModalOpen"
+      v-if="isOpen"
       :x="contextMenuPosition.x"
       :y="contextMenuPosition.y"
       @close="handleClose"
@@ -244,15 +219,6 @@ export default {
           }"
           variant="icon"
           @click.stop="copyLinkToMessage"
-        />
-        <MenuItem
-          v-if="enabledOptions['cannedResponse']"
-          :option="{
-            icon: 'comment-add',
-            label: $t('CONVERSATION.CONTEXT_MENU.CREATE_A_CANNED_RESPONSE'),
-          }"
-          variant="icon"
-          @click.stop="showCannedResponseModal"
         />
         <hr v-if="enabledOptions['report']" />
         <MenuItem

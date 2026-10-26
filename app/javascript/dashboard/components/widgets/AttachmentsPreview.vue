@@ -1,5 +1,4 @@
 <script setup>
-import { computed } from 'vue';
 import { formatBytes } from 'shared/helpers/FileHelper';
 
 import Button from 'dashboard/components-next/button/Button.vue';
@@ -13,20 +12,10 @@ const props = defineProps({
 
 const emit = defineEmits(['removeAttachment']);
 
-const nonRecordedAudioAttachments = computed(() => {
-  return props.attachments.filter(attachment => !attachment?.isVoiceMessage);
-});
-
-const recordedAudioAttachments = computed(() =>
-  props.attachments.filter(attachment => attachment.isVoiceMessage)
-);
-
 const onRemoveAttachment = itemIndex => {
   emit(
     'removeAttachment',
-    nonRecordedAudioAttachments.value
-      .filter((_, index) => index !== itemIndex)
-      .concat(recordedAudioAttachments.value)
+    props.attachments.filter((_, index) => index !== itemIndex)
   );
 };
 
@@ -48,7 +37,7 @@ const fileName = file => {
 <template>
   <div class="flex flex-wrap gap-y-1 gap-x-2 overflow-auto max-h-[12.5rem]">
     <div
-      v-for="(attachment, index) in nonRecordedAudioAttachments"
+      v-for="(attachment, index) in attachments"
       :key="attachment.id"
       class="flex items-center p-1 bg-n-slate-3 gap-1 rounded-md w-[15rem]"
     >

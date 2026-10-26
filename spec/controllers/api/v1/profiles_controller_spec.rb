@@ -115,19 +115,16 @@ RSpec.describe 'Profile API', type: :request do
         expect(agent.custom_attributes['phone_number']).to eq('+123456789')
       end
 
-      it 'updates the message_signature' do
+      it 'rejects signature changes before applying other profile attributes' do
+        old_name = agent.name
         put '/api/v1/profile',
-            params: { profile: { name: 'test', message_signature: 'Thanks\nMy Signature' } },
-            headers: agent.create_new_auth_token,
-            as: :json
+            params: { profile: { name: 'test', message_signature: 'Thanks' } },
+            headers: agent.create_new_auth_token, as: :json
 
-        expect(response).to have_http_status(:success)
-        json_response = response.parsed_body
-        agent.reload
-        expect(json_response['id']).to eq(agent.id)
-        expect(json_response['name']).to eq(agent.name)
-        expect(agent.name).to eq('test')
-        expect(json_response['message_signature']).to eq('Thanks\nMy Signature')
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response.parsed_body['error']).to eq(I18n.t('errors.message_signatures_disabled'))
+        expect(agent.reload.message_signature).to be_nil
+        expect(agent.name).to eq(old_name)
       end
 
       it 'updates the password when current password is provided' do

@@ -22,8 +22,32 @@ RSpec.describe 'Conversation Messages API', type: :request do
         create(:inbox_member, inbox: conversation.inbox, user: agent)
       end
 
+      [true, 'true'].each do |private_value|
+        it "rejects private notes without creating or publishing messages (#{private_value.inspect})" do
+          headers = agent.create_new_auth_token
+          expect do
+            post api_v1_account_conversation_messages_url(account_id: account.id, conversation_id: conversation.display_id),
+                 params: { content: 'Confidential note', private: private_value }, headers: headers, as: :json
+          end.not_to change(Message, :count)
+
+          expect(response).to have_http_status(:unprocessable_entity)
+          expect(response.parsed_body['error']).to eq(I18n.t('errors.private_notes_disabled'))
+        end
+      end
+
+      it 'rejects an outgoing audio upload without the voice flag' do
+        audio = fixture_file_upload(Rails.root.join('spec/assets/sample.ogg'), 'audio/ogg')
+        headers = agent.create_new_auth_token
+        expect do
+          post api_v1_account_conversation_messages_url(account_id: account.id, conversation_id: conversation.display_id),
+               params: { attachments: [audio] }, headers: headers
+        end.not_to change(Message, :count)
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response.parsed_body['error']).to eq(I18n.t('errors.voice_messages_disabled'))
+      end
+
       it 'creates a new outgoing message' do
-        params = { content: 'test-message', private: true }
+        params = { content: 'test-message', private: false }
 
         post api_v1_account_conversation_messages_url(account_id: account.id, conversation_id: conversation.display_id),
              params: params,
@@ -37,7 +61,7 @@ RSpec.describe 'Conversation Messages API', type: :request do
       end
 
       it 'does not create the message' do
-        params = { content: "#{'h' * 150 * 1000}a", private: true }
+        params = { content: "#{'h' * 150 * 1000}a", private: false }
 
         post api_v1_account_conversation_messages_url(account_id: account.id, conversation_id: conversation.display_id),
              params: params,
@@ -58,7 +82,7 @@ RSpec.describe 'Conversation Messages API', type: :request do
           .and_raise(ActiveRecord::QueryCanceled, 'PG::QueryCanceled: ERROR: canceling statement due to statement timeout')
 
         post api_v1_account_conversation_messages_url(account_id: account.id, conversation_id: conversation.display_id),
-             params: { content: 'test-message', private: true },
+             params: { content: 'test-message', private: false },
              headers: agent.create_new_auth_token,
              as: :json
 

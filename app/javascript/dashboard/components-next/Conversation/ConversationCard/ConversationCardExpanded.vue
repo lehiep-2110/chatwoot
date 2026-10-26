@@ -1,5 +1,5 @@
 <script setup>
-import { computed, useTemplateRef } from 'vue';
+import { computed } from 'vue';
 import { getLastMessage } from 'dashboard/helper/conversationHelper';
 import CardAvatar from './CardAvatar.vue';
 import CardContent from './CardContent.vue';
@@ -8,7 +8,6 @@ import CardPriorityIcon from './CardPriorityIcon.vue';
 import InboxName from 'dashboard/components-next/Conversation/InboxName.vue';
 import Avatar from 'next/avatar/Avatar.vue';
 import TimeAgo from 'dashboard/components/ui/TimeAgo.vue';
-import SLACardLabel from 'dashboard/components-next/Conversation/Sla/SLACardLabel.vue';
 import CardStatusIcon from './CardStatusIcon.vue';
 import Checkbox from 'dashboard/components-next/checkbox/Checkbox.vue';
 import Icon from 'dashboard/components-next/icon/Icon.vue';
@@ -47,14 +46,6 @@ const voiceCallData = computed(() => {
 });
 
 const unreadCount = computed(() => props.chat.unread_count);
-
-const slaCardLabel = useTemplateRef('slaCardLabel');
-
-const hasSlaPolicyId = computed(
-  () =>
-    !props.currentContact?.blocked &&
-    (props.chat?.applied_sla?.id || slaCardLabel.value?.hasSlaThreshold)
-);
 
 const selectedModel = computed({
   get: () => props.selected,
@@ -175,10 +166,6 @@ const selectedModel = computed({
           disable-toggle
           class="my-0 [&>div]:justify-end justify-end"
         />
-      </div>
-
-      <div v-if="hasSlaPolicyId" class="flex-shrink-0">
-        <SLACardLabel ref="slaCardLabel" :chat="chat" />
       </div>
 
       <div class="flex-shrink-0 w-[4.375rem] text-end">

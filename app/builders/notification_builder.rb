@@ -27,7 +27,7 @@ class NotificationBuilder
     return if notification_type == 'conversation_creation' && !user_subscribed_to_notification?
     # skip notifications for blocked conversations except for user mentions
     return if primary_actor.contact.blocked? && notification_type != 'conversation_mention'
-    # respect conversation access (inbox/team membership and custom-role permissions)
+    # respect conversation access (inbox membership and custom-role permissions)
     return unless user_can_access_conversation?
 
     user.notifications.create!(

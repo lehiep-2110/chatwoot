@@ -62,7 +62,7 @@ class ActionService
   end
 
   def assign_team(team_ids = [])
-    # Keep nil/0 handling for existing automation and macro payloads.
+    # Keep nil/0 handling for existing automation payloads.
     should_unassign = team_ids.blank? || %w[nil 0].include?(team_ids[0].to_s)
     return @conversation.with_lock { @conversation.update!(team_id: nil) } if should_unassign
 

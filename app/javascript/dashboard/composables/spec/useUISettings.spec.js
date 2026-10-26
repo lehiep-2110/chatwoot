@@ -93,27 +93,6 @@ describe('useUISettings', () => {
     expect(isContactSidebarItemOpen('non_existent_key')).toBe(false);
   });
 
-  it('sets signature flag for inbox correctly', () => {
-    const { setSignatureFlagForInbox } = useUISettings();
-    setSignatureFlagForInbox('email', true);
-    expect(mockDispatch).toHaveBeenCalledWith('updateUISettings', {
-      uiSettings: {
-        is_ct_labels_open: true,
-        conversation_sidebar_items_order:
-          DEFAULT_CONVERSATION_SIDEBAR_ITEMS_ORDER,
-        contact_sidebar_items_order: DEFAULT_CONTACT_SIDEBAR_ITEMS_ORDER,
-        email_signature_enabled: true,
-        editor_message_key: 'enter',
-        channel_email_quoted_reply_enabled: true,
-      },
-    });
-  });
-
-  it('fetches signature flag from UI settings correctly', () => {
-    const { fetchSignatureFlagFromUISettings } = useUISettings();
-    expect(fetchSignatureFlagFromUISettings('email')).toBe(undefined);
-  });
-
   it('sets quoted reply flag for inbox correctly', () => {
     const { setQuotedReplyFlagForInbox } = useUISettings();
     setQuotedReplyFlagForInbox('Channel::Email', false);
@@ -149,15 +128,8 @@ describe('useUISettings', () => {
   });
 
   it('handles non-existent keys', () => {
-    const {
-      isContactSidebarItemOpen,
-      fetchSignatureFlagFromUISettings,
-      isEditorHotKeyEnabled,
-    } = useUISettings();
+    const { isContactSidebarItemOpen, isEditorHotKeyEnabled } = useUISettings();
     expect(isContactSidebarItemOpen('non_existent_key')).toBe(false);
-    expect(fetchSignatureFlagFromUISettings('non_existent_key')).toBe(
-      undefined
-    );
     expect(isEditorHotKeyEnabled('non_existent_key')).toBe(false);
   });
 });
