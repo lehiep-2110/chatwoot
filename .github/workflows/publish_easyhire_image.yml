@@ -1,0 +1,163 @@
+name: Publish EasyHire Chatwoot image
+
+on:
+  push:
+    branches: [easyhire-custom]
+    paths:
+      - docker/easyhire-release.json
+      - .github/workflows/publish_easyhire_image.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: easyhire-image-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.repository == 'lehiep-2110/chatwoot'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    permissions:
+      contents: read
+      packages: write
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_DB: chatwoot_release_check
+          POSTGRES_USER: chatwoot
+          POSTGRES_PASSWORD: release-check-only
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U chatwoot -d chatwoot_release_check"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+    steps:
+      - name: Check out the release source
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Read release version
+        id: release
+        shell: bash
+        run: |
+          version=$(jq -er '.version' docker/easyhire-release.json)
+          [[ "$version" =~ ^4\.18\.0-easyhire\.[0-9]+(-rc\.[0-9]+)?$ ]]
+          image="ghcr.io/lehiep-2110/easyhire-chatwoot"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "image=$image" >> "$GITHUB_OUTPUT"
+          echo "IMAGE=$image:$version" >> "$GITHUB_ENV"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+
+      - name: Build the image from this commit
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: .
+          file: docker/Dockerfile
+          platforms: linux/amd64
+          load: true
+          push: false
+          tags: ${{ steps.release.outputs.image }}:${{ steps.release.outputs.version }}
+          build-args: |
+            GIT_SHA=${{ github.sha }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/lehiep-2110/chatwoot
+            org.opencontainers.image.version=${{ steps.release.outputs.version }}
+            org.opencontainers.image.revision=${{ github.sha }}
+          cache-from: type=gha,scope=easyhire-chatwoot-amd64
+          cache-to: type=gha,mode=max,scope=easyhire-chatwoot-amd64
+
+      - name: Verify source, production assets and Linux entrypoints
+        run: |
+          docker run --rm --network none --entrypoint ruby \
+            --mount "type=bind,src=$GITHUB_WORKSPACE,dst=/source,readonly" \
+            "$IMAGE" /app/script/verify_easyhire_image.rb "$GITHUB_SHA" /source
+
+      - name: Verify fresh database, web and worker
+        shell: bash
+        run: |
+          secret=$(openssl rand -hex 64)
+          echo "::add-mask::$secret"
+          cat > "$RUNNER_TEMP/chatwoot-release.env" <<EOF
+          RAILS_ENV=production
+          SECRET_KEY_BASE=$secret
+          RAILS_LOG_TO_STDOUT=true
+          FRONTEND_URL=http://127.0.0.1:3000
+          POSTGRES_HOST=127.0.0.1
+          POSTGRES_PORT=5432
+          POSTGRES_DATABASE=chatwoot_release_check
+          POSTGRES_USERNAME=chatwoot
+          POSTGRES_PASSWORD=release-check-only
+          REDIS_URL=redis://127.0.0.1:6379/1
+          DISABLE_GRAVATAR=true
+          EOF
+          docker run --rm --network host --env-file "$RUNNER_TEMP/chatwoot-release.env" \
+            "$IMAGE" bundle exec rails db:chatwoot_prepare
+          docker run --rm --network host --env-file "$RUNNER_TEMP/chatwoot-release.env" \
+            "$IMAGE" bundle exec rails runner 'Rails.application.eager_load!; puts "Rails boot passed"'
+          docker run -d --name easyhire-release-web --network host \
+            --env-file "$RUNNER_TEMP/chatwoot-release.env" \
+            --entrypoint /app/docker/entrypoints/rails.sh \
+            "$IMAGE" bundle exec rails server -b 127.0.0.1 -p 3000
+          docker run -d --name easyhire-release-worker --network host \
+            --env-file "$RUNNER_TEMP/chatwoot-release.env" \
+            "$IMAGE" bundle exec sidekiq -C config/sidekiq.yml -c 2
+          curl --fail --silent --show-error --retry 20 --retry-connrefused --retry-delay 3 \
+            http://127.0.0.1:3000/app/login > /dev/null
+          test "$(docker inspect --format '{{.State.Running}}' easyhire-release-worker)" = true
+
+      - name: Log in to GHCR
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish the tested image and record its digest
+        shell: bash
+        env:
+          RELEASE_VERSION: ${{ steps.release.outputs.version }}
+          IMAGE_REPOSITORY: ${{ steps.release.outputs.image }}
+        run: |
+          if docker buildx imagetools inspect "$IMAGE" > /dev/null 2>&1; then
+            echo "Release tag already exists; choose a new version instead of overwriting it."
+            exit 1
+          fi
+          docker push "$IMAGE"
+          digest=$(docker buildx imagetools inspect "$IMAGE" --format '{{json .Manifest}}' | jq -er '.digest')
+          jq -n --arg image "$IMAGE" --arg digest "$digest" --arg revision "$GITHUB_SHA" \
+            --arg version "$RELEASE_VERSION" --arg source "https://github.com/$GITHUB_REPOSITORY" \
+            '{image: $image, digest: $digest, reference: ($image + "@" + $digest), revision: $revision, version: $version, source: $source, platform: "linux/amd64"}' \
+            > easyhire-image.json
+          echo "### EasyHire Chatwoot image" >> "$GITHUB_STEP_SUMMARY"
+          echo "\`$IMAGE@$digest\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "Source commit: \`$GITHUB_SHA\`" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the release manifest
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: easyhire-image
+          path: easyhire-image.json
+          if-no-files-found: error
+
+      - name: Show startup logs on failure
+        if: failure()
+        run: |
+          docker logs easyhire-release-web 2>&1 || true
+          docker logs easyhire-release-worker 2>&1 || true
+
+      - name: Stop the temporary application containers
+        if: always()
+        run: |
+          docker rm -f easyhire-release-web easyhire-release-worker 2>/dev/null || true
