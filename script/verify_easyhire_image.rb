@@ -4,11 +4,13 @@ require 'digest'
 revision, source = ARGV
 abort 'Usage: verify_easyhire_image.rb REVISION SOURCE_DIRECTORY' unless revision && source
 abort 'Wrong source revision' unless File.read('/app/.git_sha').strip == revision
+abort 'Expected Community edition' unless ENV.fetch('CW_EDITION') == 'ce'
+abort 'Enterprise overlay must not be distributed in this image' if File.exist?('/app/enterprise')
 
-paths = %w[app enterprise lib config db docker/entrypoints].flat_map do |directory|
+paths = %w[app lib config db docker/entrypoints].flat_map do |directory|
   Dir.glob(File.join(source, directory, '**', '*'), File::FNM_DOTMATCH).select { |file| File.file?(file) }
 end
-paths.concat(%w[Gemfile Gemfile.lock package.json pnpm-lock.yaml LICENSE enterprise/LICENSE].map { |file| File.join(source, file) })
+paths.concat(%w[Gemfile Gemfile.lock package.json pnpm-lock.yaml LICENSE].map { |file| File.join(source, file) })
 paths.select! { |file| File.file?(file) }
 paths.each do |file|
   relative = file.delete_prefix("#{source}/")

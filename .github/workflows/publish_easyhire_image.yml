@@ -40,6 +40,9 @@ jobs:
         options: >-
           --health-cmd "redis-cli ping"
           --health-interval 5s --health-timeout 5s --health-retries 12
+      mailpit:
+        image: axllent/mailpit:v1.20
+        ports: ['1025:1025']
     steps:
       - name: Check out the release source
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
@@ -51,11 +54,22 @@ jobs:
         shell: bash
         run: |
           version=$(jq -er '.version' docker/easyhire-release.json)
-          [[ "$version" =~ ^4\.18\.0-easyhire\.[0-9]+(-rc\.[0-9]+)?$ ]]
+          [[ "$version" =~ ^4\.18\.0-easyhire\.[0-9]+-ce(-rc\.[0-9]+)?$ ]]
+          test "$(jq -er '.edition' docker/easyhire-release.json)" = ce
           image="ghcr.io/lehiep-2110/easyhire-chatwoot"
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "image=$image" >> "$GITHUB_OUTPUT"
           echo "IMAGE=$image:$version" >> "$GITHUB_ENV"
+
+      - name: Prepare the Community build context
+        shell: bash
+        run: |
+          context="$RUNNER_TEMP/easyhire-community-context"
+          mkdir -p "$context"
+          git archive "$GITHUB_SHA" | tar -x --exclude=enterprise --exclude=spec/enterprise -C "$context"
+          printf '\nENV CW_EDITION="ce"\n' >> "$context/docker/Dockerfile"
+          test ! -e "$context/enterprise"
+          echo "BUILD_CONTEXT=$context" >> "$GITHUB_ENV"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
@@ -63,8 +77,8 @@ jobs:
       - name: Build the image from this commit
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
         with:
-          context: .
-          file: docker/Dockerfile
+          context: ${{ env.BUILD_CONTEXT }}
+          file: ${{ env.BUILD_CONTEXT }}/docker/Dockerfile
           platforms: linux/amd64
           load: true
           push: false
@@ -75,6 +89,7 @@ jobs:
             org.opencontainers.image.source=https://github.com/lehiep-2110/chatwoot
             org.opencontainers.image.version=${{ steps.release.outputs.version }}
             org.opencontainers.image.revision=${{ github.sha }}
+            io.easyhire.edition=ce
           cache-from: type=gha,scope=easyhire-chatwoot-amd64
           cache-to: type=gha,mode=max,scope=easyhire-chatwoot-amd64
 
@@ -101,6 +116,11 @@ jobs:
           POSTGRES_PASSWORD=release-check-only
           REDIS_URL=redis://127.0.0.1:6379/1
           DISABLE_GRAVATAR=true
+          MAILER_SENDER_EMAIL=EasyHire <no-reply@example.test>
+          SMTP_ADDRESS=127.0.0.1
+          SMTP_PORT=1025
+          SMTP_DOMAIN=example.test
+          SMTP_ENABLE_STARTTLS_AUTO=false
           EOF
           docker run --rm --network host --env-file "$RUNNER_TEMP/chatwoot-release.env" \
             "$IMAGE" bundle exec rails db:chatwoot_prepare
@@ -116,6 +136,8 @@ jobs:
           curl --fail --silent --show-error --retry 20 --retry-connrefused --retry-delay 3 \
             http://127.0.0.1:3000/app/login > /dev/null
           test "$(docker inspect --format '{{.State.Running}}' easyhire-release-worker)" = true
+          docker run --rm --network host --env-file "$RUNNER_TEMP/chatwoot-release.env" \
+            "$IMAGE" bundle exec rails runner script/verify_easyhire_runtime.rb
 
       - name: Log in to GHCR
         uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
@@ -138,7 +160,7 @@ jobs:
           digest=$(docker buildx imagetools inspect "$IMAGE" --format '{{json .Manifest}}' | jq -er '.digest')
           jq -n --arg image "$IMAGE" --arg digest "$digest" --arg revision "$GITHUB_SHA" \
             --arg version "$RELEASE_VERSION" --arg source "https://github.com/$GITHUB_REPOSITORY" \
-            '{image: $image, digest: $digest, reference: ($image + "@" + $digest), revision: $revision, version: $version, source: $source, platform: "linux/amd64"}' \
+            '{image: $image, digest: $digest, reference: ($image + "@" + $digest), revision: $revision, version: $version, source: $source, platform: "linux/amd64", edition: "ce"}' \
             > easyhire-image.json
           echo "### EasyHire Chatwoot image" >> "$GITHUB_STEP_SUMMARY"
           echo "\`$IMAGE@$digest\`" >> "$GITHUB_STEP_SUMMARY"
