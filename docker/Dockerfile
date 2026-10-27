@@ -75,6 +75,8 @@ RUN if [ "$RAILS_ENV" = "production" ]; then \
 COPY package.json pnpm-lock.yaml ./
 RUN pnpm i
 
+FROM pre-builder AS app-builder
+
 COPY . /app
 
 # creating a log directory so that image wont fail when RAILS_LOG_TO_STDOUT is false
@@ -153,11 +155,11 @@ RUN if [ "$RAILS_ENV" != "production" ]; then \
   && pnpm --version; \
   fi
 
-COPY --from=pre-builder /gems/ /gems/
-COPY --from=pre-builder /app /app
+COPY --from=app-builder /gems/ /gems/
+COPY --from=app-builder /app /app
 
-# Copy .git_sha file from pre-builder stage
-COPY --from=pre-builder /app/.git_sha /app/.git_sha
+# Copy .git_sha file from the application build stage
+COPY --from=app-builder /app/.git_sha /app/.git_sha
 
 WORKDIR /app
 
