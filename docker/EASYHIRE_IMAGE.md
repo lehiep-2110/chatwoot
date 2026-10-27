@@ -1,12 +1,32 @@
 # Image Chatwoot custom cho EasyHire
 
-**Bản Community đang chờ build và kiểm chứng trước khi công bố.** Chỉ dùng image
-khi workflow thành công và đã có digest trong artifact phát hành. Lượt build
-Enterprise trước đó đã hủy trước publish. Source/license vẫn giữ nguyên trong
-repo; build context phát hành loại Enterprise theo cách đóng gói CE chính thức.
+**Đã phát hành bản Community RC cho nhóm kiểm thử ngày 27/10/2026.**
+[Workflow phát hành](https://github.com/lehiep-2110/chatwoot/actions/runs/40526296866)
+đã thành công và đẩy chính image đã kiểm thử lên GHCR.
+
+| Thành phần | Giá trị |
+| --- | --- |
+| Phiên bản | `4.18.0-easyhire.1-ce-rc.1` |
+| Source commit | `f54ceaadeed7d242a6ab510a6be452a214d97679` |
+| Registry digest | `sha256:fe1e16eaf135b1b278f59c771bf327aee0b02848aafd488fb61f60773eab2170` |
+| EasyHire tương thích | `da455c1afa931ec7f16330054b86c5d095bd37c4` và cập nhật cấu hình/tài liệu tiếp theo trên `dev_Hiep` |
+| Platform | Linux amd64 |
+
+Reference đã ghim:
+
+```text
+ghcr.io/lehiep-2110/easyhire-chatwoot:4.18.0-easyhire.1-ce-rc.1@sha256:fe1e16eaf135b1b278f59c771bf327aee0b02848aafd488fb61f60773eab2170
+```
+
+CI đã đối chiếu 6.226 file source/license, 212 assets và 3 script Linux; tạo
+database mới, eager-load Rails, chạy web/worker và đạt 9 kiểm tra API HR/Inbox,
+assignment, gửi tin, chặn Private Note, SSO. Chưa kiểm thử provider thật trên
+image RC này. Đã tải image bằng Docker theo digest trong chế độ không đăng nhập
+và đối chiếu metadata phát hành; thành viên không cần tài khoản registry.
 
 Workflow `Publish EasyHire Chatwoot image` build từ commit được push lên nhánh
-`easyhire-custom` khi thay `docker/easyhire-release.json` hoặc chính workflow.
+`easyhire-custom` khi thay `docker/easyhire-release.json`, workflow hoặc hai script
+`verify_easyhire_image.rb` / `verify_easyhire_runtime.rb`.
 Image dùng registry `ghcr.io/lehiep-2110/easyhire-chatwoot`; bản đầu dành cho
 nhóm kiểm thử là `4.18.0-easyhire.1-ce-rc.1`, nền Chatwoot v4.18.0, Linux amd64.
 
@@ -26,10 +46,10 @@ Tag phiên bản không được ghi đè. Một bản source mới cần phiên
 bản thử nghiệm cho nhóm; chạy được web/worker không thay thế kiểm thử HR/SSO,
 phân công, realtime và provider thật với phiên bản EasyHire tương ứng.
 
-GHCR mặc định tạo package private lần đầu. Chủ repo cần mở package settings,
-chuyển public nếu muốn thành viên tải không cần đăng nhập; sau đó xác nhận pull
-ẩn danh bằng digest. Không ghi token registry vào Compose hoặc `.env.example`.
+Không ghi token registry vào Compose hoặc `.env.example`. Mỗi phiên bản phát
+hành cần xác nhận quyền tải của nhóm và kiểm tra pull bằng digest.
 
-Hướng dẫn cài EasyHire nằm ở `chatwoot/INTEGRATION_CUSTOM.md` trong repo DATN,
-nhánh `dev_Hiep`. Thành viên chạy image đã công bố, không cần clone/build repo
-Chatwoot trừ khi muốn sửa mã nguồn.
+Hướng dẫn cài mới:
+[QUICKSTART_TEAM.md](https://github.com/hoangthaian04/DATN/blob/dev_Hiep/chatwoot/QUICKSTART_TEAM.md)
+trong repo DATN, nhánh `dev_Hiep`. Thành viên cần quyền truy cập repo DATN;
+chạy image đã công bố, không cần clone/build repo Chatwoot trừ khi muốn sửa source.

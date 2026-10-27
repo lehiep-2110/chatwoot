@@ -1,7 +1,13 @@
 # Building the EasyHire custom image
 
-Build from this custom source, including its pending Inbox permission changes.
-Use the same verified image ID/digest for the web server and Sidekiq worker.
+For the shared Community image, use the release workflow and pinned reference in
+[EASYHIRE_IMAGE.md](EASYHIRE_IMAGE.md). The team setup in EasyHire uses that image
+for both the web server and Sidekiq worker.
+
+The command below is for local development with the checked-out source. It
+includes the Enterprise overlay when present and is subject to its license.
+The release workflow prepares a separate Community context before building,
+verifying and publishing the image.
 
 ```sh
 docker build -f docker/Dockerfile \
