@@ -39,7 +39,7 @@ abort 'Team membership must not grant Inbox access' unless status == 200 && body
 checks << 'team_does_not_grant_inbox'
 
 status, = request.call('POST', "#{base}/inbox_members", agent_token, inbox_id: inbox.id, user_ids: [users.fetch('agent').id])
-abort 'HR must not manage Inbox members' unless status == 403
+abort "HR must not manage Inbox members (HTTP #{status})" unless status == 401
 checks << 'hr_cannot_manage_inbox'
 
 status, = request.call('POST', "#{base}/inbox_members", admin_token, inbox_id: inbox.id, user_ids: [users.fetch('outsider').id])

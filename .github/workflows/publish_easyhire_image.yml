@@ -6,6 +6,8 @@ on:
     paths:
       - docker/easyhire-release.json
       - .github/workflows/publish_easyhire_image.yml
+      - script/verify_easyhire_image.rb
+      - script/verify_easyhire_runtime.rb
   workflow_dispatch:
 
 permissions:
