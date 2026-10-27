@@ -1,5 +1,12 @@
 # Image Chatwoot custom cho EasyHire
 
+**Chưa có image phát hành.** Workflow đang tắt trong lúc chốt edition và điều
+kiện phân phối. Lượt build đầu đã hủy trước bước đăng nhập GHCR/publish vì bản
+đóng gói còn Enterprise overlay; xem `enterprise/LICENSE`. Không dùng tag bên
+dưới như một image đã tồn tại. Phương án đề xuất là image Community custom,
+kiểm chứng lại HR/Inbox/SSO trước khi công bố. Mã license và edition detection
+trong ứng dụng chưa được thay đổi.
+
 Workflow `Publish EasyHire Chatwoot image` build từ commit được push lên nhánh
 `easyhire-custom` khi thay `docker/easyhire-release.json` hoặc chính workflow.
 Image dùng registry `ghcr.io/lehiep-2110/easyhire-chatwoot`; bản đầu dành cho
