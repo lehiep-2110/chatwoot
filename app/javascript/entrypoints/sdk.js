@@ -7,6 +7,7 @@ import {
 } from '../sdk/settingsHelper';
 import {
   computeHashForUserData,
+  getConversationCookieName,
   getUserCookieName,
   hasUserKeys,
 } from '../sdk/cookieHelpers';
@@ -20,6 +21,21 @@ import { SDK_SET_BUBBLE_VISIBILITY } from 'shared/constants/sharedFrameEvents';
 
 const runSDK = ({ baseUrl, websiteToken }) => {
   if (window.$chatwoot) {
+    if (
+      window.$chatwoot.websiteToken !== websiteToken ||
+      window.$chatwoot.baseUrl !== baseUrl
+    ) {
+      window.$chatwoot.toggle('close');
+      Object.assign(window.$chatwoot, {
+        baseUrl,
+        websiteToken,
+        hasLoaded: false,
+        resetTriggered: false,
+      });
+      delete window.$chatwoot.user;
+      delete window.$chatwoot.identifier;
+      IFrameHelper.createFrame({ baseUrl, websiteToken, replace: true });
+    }
     return;
   }
 
@@ -89,10 +105,10 @@ const runSDK = ({ baseUrl, websiteToken }) => {
       let widgetHolder = document.querySelector('.woot-widget-holder');
       if (visibility === 'hide') {
         addClasses(widgetHolder, 'woot-widget--without-bubble');
-        addClasses(widgetElm, 'woot-hidden');
+        if (widgetElm) addClasses(widgetElm, 'woot-hidden');
         window.$chatwoot.hideMessageBubble = true;
       } else if (visibility === 'show') {
-        removeClasses(widgetElm, 'woot-hidden');
+        if (widgetElm) removeClasses(widgetElm, 'woot-hidden');
         removeClasses(widgetHolder, 'woot-widget--without-bubble');
         window.$chatwoot.hideMessageBubble = false;
       }
@@ -197,6 +213,7 @@ const runSDK = ({ baseUrl, websiteToken }) => {
         IFrameHelper.events.toggleBubble();
       }
 
+      Cookies.remove(getConversationCookieName());
       Cookies.remove('cw_conversation');
       Cookies.remove(getUserCookieName());
 

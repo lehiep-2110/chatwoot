@@ -27,6 +27,12 @@ export const getUserCookieName = () => {
   return `${SET_USER_COOKIE_PREFIX}${websiteIdentifier}`;
 };
 
+export const getConversationCookieName = () =>
+  `cw_conversation_${window.$chatwoot.websiteToken}`;
+
+export const getConversationCookie = () =>
+  Cookies.get(getConversationCookieName()) || Cookies.get('cw_conversation');
+
 export const getUserString = ({ identifier = '', user }) => {
   const userAttributes = [
     ...ALLOWED_USER_ATTRIBUTES.map(key => [key, user[key] || '']),

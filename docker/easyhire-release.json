@@ -1,7 +1,7 @@
 {
-  "version": "4.18.0-easyhire.1-ce-rc.1",
+  "version": "4.18.0-easyhire.1-ce-rc.2",
   "edition": "ce",
   "base_version": "4.18.0",
   "platform": "linux/amd64",
-  "compatible_easyhire_commit": "da455c1afa931ec7f16330054b86c5d095bd37c4"
+  "compatible_easyhire_commit": "44764d325e25538fcca6d19d5f7393fe1c039fce"
 }
