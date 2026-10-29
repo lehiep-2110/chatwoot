@@ -5,6 +5,7 @@ on:
     branches: [easyhire-custom]
     paths:
       - docker/easyhire-release.json
+      - docker/Dockerfile
       - .github/workflows/publish_easyhire_image.yml
       - script/verify_easyhire_image.rb
       - script/verify_easyhire_runtime.rb
