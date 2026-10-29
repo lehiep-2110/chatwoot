@@ -1,21 +1,21 @@
 # Image Chatwoot custom cho EasyHire
 
-**Đã phát hành bản Community RC cho nhóm kiểm thử ngày 27/10/2026.**
-[Workflow phát hành](https://github.com/lehiep-2110/chatwoot/actions/runs/40526296866)
+**Đã phát hành Community RC2 cho nhóm kiểm thử ngày 30/10/2026.**
+[Workflow phát hành](https://github.com/lehiep-2110/chatwoot/actions/runs/40970920664)
 đã thành công và đẩy chính image đã kiểm thử lên GHCR.
 
 | Thành phần | Giá trị |
 | --- | --- |
-| Phiên bản | `4.18.0-easyhire.1-ce-rc.1` |
-| Source commit | `f54ceaadeed7d242a6ab510a6be452a214d97679` |
-| Registry digest | `sha256:fe1e16eaf135b1b278f59c771bf327aee0b02848aafd488fb61f60773eab2170` |
-| EasyHire tương thích | `da455c1afa931ec7f16330054b86c5d095bd37c4` và cập nhật cấu hình/tài liệu tiếp theo trên `dev_Hiep` |
+| Phiên bản | `4.18.0-easyhire.1-ce-rc.2` |
+| Source commit | `c9b670d2c29fb101a2c6682e64a9fe2d645479f5` |
+| Registry digest | `sha256:85026ee814d7943f977125fd1cc62468bde22b30b0d8abebc48141f44cc2c08b` |
+| EasyHire tương thích | `b10ebc3f568a531f18472178862ad2dfd85bb008` trên `dev_Hiep` |
 | Platform | Linux amd64 |
 
 Reference đã ghim:
 
 ```text
-ghcr.io/lehiep-2110/easyhire-chatwoot:4.18.0-easyhire.1-ce-rc.1@sha256:fe1e16eaf135b1b278f59c771bf327aee0b02848aafd488fb61f60773eab2170
+ghcr.io/lehiep-2110/easyhire-chatwoot:4.18.0-easyhire.1-ce-rc.2@sha256:85026ee814d7943f977125fd1cc62468bde22b30b0d8abebc48141f44cc2c08b
 ```
 
 CI đã đối chiếu 6.226 file source/license, 212 assets và 3 script Linux; tạo
@@ -24,11 +24,18 @@ assignment, gửi tin, chặn Private Note, SSO. Chưa kiểm thử provider th�
 image RC này. Đã tải image bằng Docker theo digest trong chế độ không đăng nhập
 và đối chiếu metadata phát hành; thành viên không cần tài khoản registry.
 
+RC2 giữ cookie hội thoại riêng cho từng Website Inbox và cho phép chuyển công
+ty trên cùng trang mà vẫn khôi phục đúng lịch sử. EasyHire chỉ ẩn widget khi
+rời Career Site. Đã đạt thêm 9 luồng trình duyệt trên chính image tải từ GHCR,
+không mount SDK bên ngoài. Cần cập nhật đồng thời frontend EasyHire và image
+Chatwoot; frontend tải SDK với phiên bản RC2 để tránh dùng lại bản cũ trong bộ
+nhớ đệm trình duyệt. Dữ liệu và schema không đổi.
+
 Workflow `Publish EasyHire Chatwoot image` build từ commit được push lên nhánh
-`easyhire-custom` khi thay `docker/easyhire-release.json`, workflow hoặc hai script
-`verify_easyhire_image.rb` / `verify_easyhire_runtime.rb`.
-Image dùng registry `ghcr.io/lehiep-2110/easyhire-chatwoot`; bản đầu dành cho
-nhóm kiểm thử là `4.18.0-easyhire.1-ce-rc.1`, nền Chatwoot v4.18.0, Linux amd64.
+`easyhire-custom` khi thay `docker/easyhire-release.json`, `docker/Dockerfile`,
+workflow hoặc hai script `verify_easyhire_image.rb` / `verify_easyhire_runtime.rb`.
+Image dùng registry `ghcr.io/lehiep-2110/easyhire-chatwoot`; bản hiện tại dành cho
+nhóm kiểm thử là `4.18.0-easyhire.1-ce-rc.2`, nền Chatwoot v4.18.0, Linux amd64.
 
 Workflow giữ nguyên license và edition detection trong source. Enterprise
 không được đưa vào image; image có `CW_EDITION=ce`. Không dùng workflow CE/EE
